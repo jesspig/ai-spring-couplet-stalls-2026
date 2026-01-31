@@ -21,27 +21,19 @@ yarn install
 
 ## 配置
 
-创建 `.env` 文件（参考 `.env.example`）：
+创建 `.dev.vars` 文件（参考 `.dev.vars.example`）：
 
 ```env
-PORT=3000
-OPENAI_BASE_URL=https://api.openai.com
 OPENAI_API_KEY=your_api_key_here
+OPENAI_BASE_URL=https://api.openai.com
 ```
 
 ## 运行
 
-开发模式（支持热重载）：
+开发模式（Cloudflare Workers 本地模拟）：
 
 ```bash
 yarn dev
-```
-
-生产模式：
-
-```bash
-yarn build
-yarn start
 ```
 
 ## API 端点
@@ -93,7 +85,7 @@ curl http://localhost:3000/v1/models \
 
 ### 使用环境变量配置 API Key
 
-1. 设置环境变量：
+1. 在 `.dev.vars` 文件中设置环境变量：
    ```env
    OPENAI_API_KEY=sk-xxxxxxxxxxxxxxxx
    OPENAI_BASE_URL=https://api.openai.com
@@ -122,12 +114,11 @@ OPENAI_BASE_URL=https://your-custom-api.com
 ```
 src/
 ├── routes/
-│   ├── openai.routes.ts   # OpenAI 路由
-│   └── docs.routes.ts     # 文档路由
+│   └── openai.routes.ts   # OpenAI 路由
 ├── services/
 │   └── openai.service.ts  # OpenAI 服务
 ├── types/
 │   └── openai.ts          # 类型定义
 ├── index.ts               # 应用入口
-└── server.ts              # 服务器启动
+└── worker.ts              # Cloudflare Workers 入口
 ```
