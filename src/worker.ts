@@ -11,9 +11,9 @@ export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
     
-    if (url.pathname.startsWith("/v1/") || url.pathname.startsWith("/doc") || 
-        url.pathname.startsWith("/swagger-ui") || url.pathname.startsWith("/scalar") || 
-        url.pathname.startsWith("/redoc")) {
+    if (url.pathname.startsWith("/v1/") || url.pathname.startsWith("/api/") ||
+        url.pathname.startsWith("/doc") || url.pathname.startsWith("/swagger-ui") ||
+        url.pathname.startsWith("/scalar") || url.pathname.startsWith("/redoc")) {
       return app.fetch(request, env, ctx);
     }
     

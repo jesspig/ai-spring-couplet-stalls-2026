@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import SettingsButton from './components/SettingsButton';
 
 interface Model {
   id: string;
@@ -35,6 +36,19 @@ export default function DesignInput() {
       });
   }, []);
 
+  // 处理模型列表更新
+  const handleModelsUpdate = (newModels: Model[]) => {
+    setModels(newModels);
+    setError(false);
+    // 如果当前选中的模型不在新列表中，选择第一个
+    if (newModels.length > 0) {
+      const currentExists = newModels.some(m => m.id === selectedModel);
+      if (!currentExists) {
+        setSelectedModel(newModels[0].id);
+      }
+    }
+  };
+
   const handleStartDesign = () => {
     if (!topic.trim()) {
       alert('请输入主题');
@@ -50,7 +64,10 @@ export default function DesignInput() {
 
   return (
     <div className="design-container">
-      <h1 className="design-title">iFlow 码年挥春小摊</h1>
+      <div className="design-header">
+        <h1 className="design-title">iFlow 码年挥春小摊</h1>
+        <SettingsButton onModelsUpdate={handleModelsUpdate} />
+      </div>
       <textarea
         className="design-textarea"
         placeholder="请输入一个主题"

@@ -5,6 +5,7 @@ import { prettyJSON } from "hono/pretty-json";
 import { swaggerUI } from "@hono/swagger-ui";
 import { apiReference } from "@scalar/hono-api-reference";
 import openaiRoutes from "./routes/openai.routes";
+import testRoutes from "./routes/test.routes";
 
 export interface Env {
   OPENAI_API_KEY?: string;
@@ -30,6 +31,7 @@ app.use("*", logger());
 app.use("*", prettyJSON());
 
 app.route("/", openaiRoutes);
+app.route("/", testRoutes);
 
 app.doc("/doc", {
   openapi: "3.0.0",

@@ -1,0 +1,274 @@
+/* 设置按钮样式 */
+.settings-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.settings-button:hover {
+  background: #f5f5f5;
+  border-color: #646cff;
+  color: #646cff;
+}
+
+/* 头部容器样式 */
+.design-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 24px;
+}
+
+.design-header .design-title {
+  margin-bottom: 0;
+}
+
+.design-header .settings-button {
+  position: absolute;
+  right: 0;
+}
+
+/* 弹窗遮罩层 */
+.settings-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+/* 弹窗容器 */
+.settings-modal {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: modalSlideIn 0.2s ease-out;
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 弹窗头部 */
+.settings-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.settings-modal-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.settings-modal-close {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-modal-close:hover {
+  background: #f5f5f5;
+  color: #333;
+}
+
+/* 弹窗内容 */
+.settings-modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+/* 表单组 */
+.settings-form-group {
+  margin-bottom: 20px;
+}
+
+.settings-form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.settings-form-group input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 14px;
+  border: 1px solid #d0d0d0;
+  border-radius: 8px;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.settings-form-group input:focus {
+  border-color: #646cff;
+}
+
+.settings-form-group input::placeholder {
+  color: #aaa;
+}
+
+/* 测试区域 */
+.settings-test-section {
+  margin-top: 24px;
+  padding-top: 24px;
+  border-top: 1px solid #e0e0e0;
+}
+
+.settings-test-button {
+  width: 100%;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #646cff;
+  background: #f0f0ff;
+  border: 1px solid #646cff;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-test-button:hover:not(:disabled) {
+  background: #646cff;
+  color: white;
+}
+
+.settings-test-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* 测试消息 */
+.settings-test-message {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.settings-test-message.success {
+  background: #f0f9f0;
+  color: #2e7d32;
+  border: 1px solid #c8e6c9;
+}
+
+.settings-test-message.error {
+  background: #fef0f0;
+  color: #c62828;
+  border: 1px solid #ffcdd2;
+}
+
+/* 模型列表 */
+.settings-models-list {
+  margin-top: 16px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.settings-models-list h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.settings-models-list ul {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: #555;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.settings-models-list li {
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+/* 弹窗底部 */
+.settings-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  border-top: 1px solid #e0e0e0;
+  background: #fafafa;
+}
+
+.settings-button-secondary,
+.settings-button-primary {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.settings-button-secondary {
+  color: #666;
+  background: white;
+  border: 1px solid #d0d0d0;
+}
+
+.settings-button-secondary:hover {
+  background: #f5f5f5;
+  border-color: #bbb;
+}
+
+.settings-button-primary {
+  color: white;
+  background: #646cff;
+  border: 1px solid #646cff;
+}
+
+.settings-button-primary:hover {
+  background: #535bf2;
+  border-color: #535bf2;
+}

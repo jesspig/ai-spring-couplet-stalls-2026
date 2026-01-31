@@ -1854,6 +1854,7 @@ __metadata:
   dependencies:
     "@hono/swagger-ui": "npm:^0.5.3"
     "@hono/zod-openapi": "npm:^1.2.0"
+    "@hono/zod-validator": "npm:^0.7.6"
     "@scalar/hono-api-reference": "npm:^0.9.38"
     "@types/node": "npm:^25.1.0"
     "@types/react": "npm:^18.3.12"
