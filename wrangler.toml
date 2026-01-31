@@ -1,0 +1,14 @@
+name = "iflow-demo"
+main = "src/worker.ts"
+compatibility_date = "2026-01-31"
+
+[assets]
+directory = "frontend/dist"
+binding = "ASSETS"
+
+[build]
+command = "yarn build:all"
+
+[dev]
+port = 3000
+host = "localhost"

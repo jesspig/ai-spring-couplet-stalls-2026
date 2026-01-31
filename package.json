@@ -1,21 +1,33 @@
 {
-    "name": "iflow_demo",
-    "packageManager": "yarn@4.12.0",
-    "type": "module",
-    "scripts": {
-        "dev": "wrangler dev",
-        "build": "tsc"
-    },
-    "dependencies": {
-        "@hono/swagger-ui": "^0.5.3",
-        "@hono/zod-openapi": "^1.2.0",
-        "@scalar/hono-api-reference": "^0.9.38",
-        "hono": "^4.11.7",
-        "zod": "^4.3.6"
-    },
-    "devDependencies": {
-        "@types/node": "^25.1.0",
-        "typescript": "^5.9.3",
-        "wrangler": "^4.61.1"
-    }
+  "name": "iflow_demo",
+  "packageManager": "yarn@4.12.0",
+  "type": "module",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "wrangler dev",
+    "build:backend": "tsc",
+    "build:frontend": "yarn workspace frontend build",
+    "build:all": "yarn build:backend && yarn build:frontend",
+    "build": "yarn build:all"
+  },
+  "dependencies": {
+    "@hono/swagger-ui": "^0.5.3",
+    "@hono/zod-openapi": "^1.2.0",
+    "@scalar/hono-api-reference": "^0.9.38",
+    "hono": "^4.11.7",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^25.1.0",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.9.3",
+    "vite": "^6.0.7",
+    "wrangler": "^4.61.1"
+  }
 }
