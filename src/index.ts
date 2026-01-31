@@ -6,7 +6,23 @@ import { swaggerUI } from "@hono/swagger-ui";
 import { apiReference } from "@scalar/hono-api-reference";
 import openaiRoutes from "./routes/openai.routes";
 
-const app = new OpenAPIHono();
+export interface Env {
+  OPENAI_API_KEY?: string;
+  OPENAI_BASE_URL?: string;
+}
+
+const app = new OpenAPIHono<{ Bindings: Env }>();
+
+if (typeof process !== "undefined") {
+  app.use("*", async (c, next) => {
+    c.env = {
+      ...c.env,
+      OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+      OPENAI_BASE_URL: process.env.OPENAI_BASE_URL
+    };
+    await next();
+  });
+}
 
 app.use("*", cors());
 app.use("*", logger());

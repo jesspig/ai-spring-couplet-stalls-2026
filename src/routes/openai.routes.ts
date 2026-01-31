@@ -2,7 +2,16 @@ import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { OpenAIService } from "../services/openai.service";
 import type { OpenAIModel } from "../types/openai";
 
-const app = new OpenAPIHono();
+interface Env {
+  OPENAI_API_KEY?: string;
+  OPENAI_BASE_URL?: string;
+}
+
+const app = new OpenAPIHono<{ Bindings: Env }>();
+
+const getEnvVar = (c: any, key: string): string => {
+  return c.env?.[key] || (typeof process !== "undefined" ? process.env?.[key] : "") || "";
+};
 
 const getModelsRoute = createRoute({
   method: "get",
@@ -140,8 +149,8 @@ curl http://localhost:3000/v1/models
 
 const getModelsHandler = async (c: any) => {
   const authHeader = c.req.header("authorization");
-  const apiKey = authHeader?.replace("Bearer ", "") || process.env.OPENAI_API_KEY || "";
-  const baseUrl = process.env.OPENAI_BASE_URL || "https://api.openai.com";
+  const apiKey = authHeader?.replace("Bearer ", "") || getEnvVar(c, "OPENAI_API_KEY") || "";
+  const baseUrl = getEnvVar(c, "OPENAI_BASE_URL") || "https://api.openai.com";
 
   if (!apiKey) {
     return c.json({
@@ -167,7 +176,11 @@ const getModelsHandler = async (c: any) => {
       error: {
         message,
         type: "api_error",
-        code: "internal_error"
+        code: "internal_error",
+        debug: {
+          baseUrl,
+          apiKeyPrefix: apiKey.substring(0, 8) + "..."
+        }
       }
     }, 500);
   }

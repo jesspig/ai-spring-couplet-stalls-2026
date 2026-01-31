@@ -5,12 +5,14 @@ export class OpenAIService {
   private apiKey: string;
 
   constructor(baseUrl: string, apiKey: string) {
-    this.baseUrl = baseUrl;
+    this.baseUrl = baseUrl.replace(/\/$/, "");
     this.apiKey = apiKey;
   }
 
   async getModels(): Promise<OpenAIModel[]> {
-    const response = await fetch(`${this.baseUrl}/v1/models`, {
+    const url = `${this.baseUrl}/v1/models`;
+    
+    const response = await fetch(url, {
       headers: {
         Authorization: `Bearer ${this.apiKey}`,
         "Content-Type": "application/json"
@@ -18,7 +20,8 @@ export class OpenAIService {
     });
 
     if (!response.ok) {
-      throw new Error(`获取模型列表失败: ${response.status} ${response.statusText}`);
+      const errorText = await response.text();
+      throw new Error(`获取模型列表失败: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = (await response.json()) as OpenAIModelsResponse;
