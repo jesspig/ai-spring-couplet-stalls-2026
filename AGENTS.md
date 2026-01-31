@@ -4,98 +4,82 @@
 
 **iFlow 码年挥春小摊** - 基于 AI 的春联创作平台
 
-这是一个基于 **Hono** 框架实现的春联生成应用，利用大语言模型根据用户输入的主题自动创作符合中国传统文化规范的春联（上联、下联、横批）和挥春。项目采用前后端分离架构，支持多种 OpenAI 兼容 API 服务。
+这是一个纯前端实现的春联生成应用，利用大语言模型通过三阶段工作流自动创作符合中国传统文化规范的春联（上联、下联、横批）和挥春。项目采用 React + Vite + TypeScript 技术栈，支持多种 OpenAI 兼容 API 服务，可直接部署到 GitHub Pages 等静态托管平台。
 
 ### 核心功能
 
+- **三阶段工作流**：主题分析 → 春联生成 → 质量审查，确保生成质量
 - **春联生成**：根据主题自动创作符合平仄对仗规则的春联
 - **挥春创作**：生成四个与主题相关的吉祥挥春
 - **多模型支持**：支持 OpenAI 及其他兼容的 API 服务
-- **灵活配置**：支持环境变量和前端设置两种配置方式
+- **灵活配置**：支持字数（5/7/9字）、对联顺序、横批方向、福字方向等配置
+- **自动审查**：内置质量审查机制，最多重试 3 次
 - **精美展示**：传统风格的春联展示界面
+- **详细日志**：控制台输出完整的生成过程日志
 
 ### 核心技术栈
-
-**后端服务**
-
-- **运行时**: Cloudflare Workers
-- **框架**: Hono 4.x
-- **语言**: TypeScript (ES2022)
-- **包管理器**: Yarn 4.x + Workspaces
-- **API 验证**: Zod + @hono/zod-openapi
-- **文档**: Swagger UI、Scalar、ReDoc
-- **部署**: Wrangler (Cloudflare Workers)
 
 **前端应用**
 
 - **框架**: React 18
 - **构建工具**: Vite 6.x
-- **语言**: TypeScript
+- **路由管理**: React Router v7
+- **语言**: TypeScript (ES2022)
+- **包管理器**: Yarn 4.x
+- **部署**: GitHub Pages 等静态托管平台
+
+**设计风格**
+
 - **UI 风格**: 夸张极简主义（Exaggerated Minimalism）
 - **字体**: Noto Serif TC + Noto Sans TC
+- **配色**: 中国新年红金主题
 
 ### 架构特点
 
-- 基于 Cloudflare Workers 的 Serverless 架构
-- Monorepo 结构，使用 Yarn Workspaces 管理前后端
-- RESTful API 设计，遵循 OpenAPI 3.0 规范
+- 纯前端架构，无需后端服务器
+- 三阶段工作流确保春联质量
+- 直接调用 OpenAI 兼容 API
 - 完整的 TypeScript 类型支持
-- 模块化架构，路由、服务、类型分离
-- 支持请求体和环境变量两种认证方式
-- 使用 c.env 管理环境变量，适配 Workers 环境
-- 静态资源通过 Workers Assets 绑定提供服务
+- 模块化架构，组件、服务、配置分离
+- 支持灵活的配置选项
+- 可部署到任何静态托管平台
 
 ## 项目结构
 
 ```
 trae_demo_04/
 ├── src/
-│   ├── routes/
-│   │   ├── openai.routes.ts      # OpenAI API 路由定义（包含春联生成）
-│   │   └── test.routes.ts        # 测试 API 路由
-│   ├── services/
-│   │   └── openai.service.ts     # OpenAI 服务实现
-│   ├── types/
-│   │   └── openai.ts             # TypeScript 类型定义
+│   ├── components/               # React 组件
+│   │   ├── SettingsButton.tsx    # 设置按钮组件
+│   │   ├── SettingsModal.tsx     # 设置弹窗组件
+│   │   └── Settings.css          # 设置样式
+│   ├── pages/                    # 页面组件
+│   │   ├── DisplayPage.tsx       # 春联展示页面
+│   │   ├── DisplayPage.css       # 展示页面样式
+│   │   ├── LoadingPage.tsx       # 加载页面（执行工作流）
+│   │   └── LoadingPage.css       # 加载页面样式
 │   ├── config/
-│   │   └── spring-festival.config.ts  # 春联生成配置和提示词
-│   ├── index.ts                  # 应用主入口（路由和中间件配置）
-│   └── worker.ts                 # Cloudflare Workers 入口
-├── frontend/
-│   ├── src/
-│   │   ├── components/           # React 组件
-│   │   │   ├── SettingsButton.tsx
-│   │   │   ├── SettingsModal.tsx
-│   │   │   └── Settings.css
-│   │   ├── pages/                # 页面组件
-│   │   │   ├── DisplayPage.tsx   # 春联展示页面
-│   │   │   ├── DisplayPage.css
-│   │   │   ├── LoadingPage.tsx   # 加载页面
-│   │   │   └── LoadingPage.css
-│   │   ├── types/                # 前端类型定义
-│   │   ├── App.tsx               # 主应用组件（路由状态管理）
-│   │   ├── App.css
-│   │   ├── main.tsx              # React 入口
-│   │   ├── DesignInput.tsx       # 主设计输入组件
-│   │   ├── DesignInput.css       # 主设计输入样式
-│   │   └── style.css             # 全局样式
-│   ├── dist/                     # Vite 构建输出
-│   ├── public/                   # 静态资源
-│   ├── index.html                # HTML 模板
-│   ├── vite.config.ts            # Vite 配置
-│   ├── tsconfig.json             # TypeScript 配置
-│   └── package.json              # 前端依赖
+│   │   └── prompts.config.ts     # 三阶段工作流提示词配置
+│   ├── services/
+│   │   └── spring-workflow.service.ts  # 春联生成工作流服务
+│   ├── App.tsx                   # 主应用组件
+│   ├── App.css                   # 应用样式
+│   ├── DesignInput.tsx           # 主设计输入组件
+│   ├── DesignInput.css           # 设计输入样式
+│   ├── main.tsx                  # React 入口
+│   ├── routes.tsx                # 路由配置
+│   └── style.css                 # 全局样式
+├── public/
+│   └── vite.svg                  # Vite 图标
 ├── design-system/                # 设计系统
 │   └── iflow-码年挥春小摊/
-│       ├── MASTER.md             # 设计系统主文档
-│       └── pages/                # 页面级设计规范（预留）
-├── public/                       # 静态资源目录
-├── dist/                         # TypeScript 编译输出
-├── package.json                  # 根项目配置
-├── tsconfig.json                 # TypeScript 编译配置
-├── wrangler.toml                 # Cloudflare Workers 配置
+│       └── MASTER.md             # 设计系统主文档
+├── index.html                    # HTML 模板
+├── package.json                  # 项目配置
+├── tsconfig.json                 # TypeScript 配置
+├── vite.config.ts                # Vite 配置
 ├── .editorconfig                 # 编辑器统一配置
-└── .dev.vars.example             # 环境变量示例
+└── README.md                     # 项目说明
 ```
 
 ## 构建和运行
@@ -106,126 +90,104 @@ trae_demo_04/
 yarn install
 ```
 
-### 环境配置
-
-复制 `.dev.vars.example` 创建 `.dev.vars` 文件：
-
-```env
-OPENAI_API_KEY=your_api_key_here
-OPENAI_BASE_URL=https://api.openai.com
-```
-
 ### 开发模式
-
-**后端开发（包含前端）**
 
 ```bash
 yarn dev
 ```
 
-服务将运行在 <http://localhost:3000>
+服务将运行在 <http://localhost:5173>
 
-**前端独立开发**
-
-```bash
-yarn workspace frontend dev
-```
-
-前端将运行在独立端口（默认 <http://localhost:5173>）
-
-### 构建
-
-**仅构建后端**
-
-```bash
-yarn build:backend
-```
-
-**仅构建前端**
-
-```bash
-yarn build:frontend
-```
-
-**构建全部（推荐）**
+### 构建生产版本
 
 ```bash
 yarn build
-# 或
-yarn build:all
 ```
 
-## API 端点
+编译输出到 `dist/` 目录。
 
-### 主端点
-
-| 端点 | 方法 | 描述 |
-|------|------|------|
-| `/v1/models` | POST | 获取模型列表 |
-| `/v1/spring-festival/generate` | POST | 生成春联和挥春 |
-| `/` | GET | 服务信息 |
-| `/doc` | GET | OpenAPI 3.0 JSON 规范 |
-
-### 文档端点
-
-| 端点 | 描述 |
-|------|------|
-| `/swagger-ui` | Swagger UI 文档界面 |
-| `/scalar` | Scalar 深色模式文档（现代布局） |
-| `/scalar-light` | Scalar 浅色模式文档（经典布局） |
-| `/redoc` | ReDoc 响应式文档 |
-
-### 春联生成 API
-
-**请求示例**
+### 预览构建结果
 
 ```bash
-curl -X POST http://localhost:3000/v1/spring-festival/generate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "topic": "龙年",
-    "model": "gpt-4",
-    "apiUrl": "https://api.openai.com",
-    "apiKey": "YOUR_API_KEY"
-  }'
+yarn preview
 ```
 
-**响应示例**
+## 使用指南
 
-```json
-{
-  "upperCouplet": "龙腾盛世千家喜",
-  "lowerCouplet": "春满神州万象新",
-  "horizontalScroll": "龙年大吉",
-  "springScrolls": [
-    "福到",
-    "财源广进",
-    "万事如意",
-    "恭喜发财"
-  ]
-}
+### 通过 Web 界面
+
+1. 启动开发服务器：`yarn dev`
+2. 访问 <http://localhost:5173>
+3. 点击设置按钮配置 API URL 和 API Key
+4. 输入主题（如：马年、科技、家庭、事业等）
+5. 选择字数（5字、7字、9字）
+6. 选择对联顺序（左上右下、右上左下）
+7. 选择横批方向（左到右、右到左）
+8. 选择福字方向（正贴、倒贴）
+9. 选择模型
+10. 点击"开始设计"
+
+### 控制台日志
+
+生成过程中，控制台会输出详细的日志：
+
+```
+=== 开始春联生成工作流 ===
+主题：马年
+字数：7字
+
+=== 尝试 1/3 ===
+  调用 LLM: gpt-4 (temperature: 0.7)
+✓ 主题分析完成
+  调用 LLM: gpt-4 (temperature: 0.8)
+✓ 春联生成完成
+  上联：龙腾盛世千家喜
+  下联：春满神州万象新
+  调用 LLM: gpt-4 (temperature: 0.3)
+✓ 质量审查完成
+✓ 审查通过！
+
+=== 春联生成成功 ===
 ```
 
-### 认证方式
+## 工作流说明
 
-**方式 1：请求体认证**
+春联生成采用三阶段工作流，确保生成质量：
 
-```bash
-curl -X POST http://localhost:3000/v1/models \
-  -H "Content-Type: application/json" \
-  -d '{
-    "apiUrl": "https://api.openai.com",
-    "apiKey": "YOUR_API_KEY"
-  }'
-```
+### 阶段1：主题分析（temperature: 0.7）
 
-**方式 2：环境变量认证**
+- 深入分析用户主题
+- 提取文化意象、关键词汇
+- 规划对仗方向和挥春主题
+- 生成结构化的创作提示词
 
-配置 `.dev.vars` 文件后直接调用：
+### 阶段2：春联生成（temperature: 0.8）
 
-```bash
-curl -X POST http://localhost:3000/v1/models
-```
+- 基于主题分析结果生成春联
+- 严格遵循字数、平仄、对仗规则
+- 生成上联、下联、横批和四个挥春
+- 如有审查错误，会传入改进建议
+
+### 阶段3：质量审查（temperature: 0.3）
+
+- 审查字数是否正确
+- 检查平仄格式（上仄下平）
+- 验证对仗工整程度
+- 检查意义相关性和用词规范
+- 最多重试 3 次，直到通过审查
+
+## 春联生成规则
+
+系统根据以下规则生成春联：
+
+- **字数选择**：支持 5 字、7 字、9 字春联
+- **上联**：指定字数，仄声结尾（三声、四声）
+- **下联**：与上联字数相等，平声结尾（一声、二声）
+- **横批**：4 个字，概括主题
+- **挥春**：4 个，每个 4 字，内容吉利喜庆
+- 上下联必须对仗工整，意境相符
+- 内容贴合用户主题，寓意吉祥如意
+- 可适当融入马年元素或程序员元素（以不破坏通顺和工整为前提）
 
 ## 设计系统
 
@@ -233,11 +195,16 @@ curl -X POST http://localhost:3000/v1/models
 
 | 角色 | Hex | CSS 变量 |
 |------|-----|----------|
-| Primary | `#0F172A` | `--color-primary` |
-| Secondary | `#1E3A8A` | `--color-secondary` |
-| CTA/Accent | `#CA8A04` | `--color-cta` |
-| Background | `#F8FAFC` | `--color-background` |
-| Text | `#020617` | `--color-text` |
+| Primary | `#DC2626` | `--color-primary` |
+| Primary Dark | `#991B1B` | `--color-primary-dark` |
+| Primary Light | `#FEE2E2` | `--color-primary-light` |
+| Gold | `#CA8A04` | `--color-gold` |
+| Gold Light | `#FDE68A` | `--color-gold-light` |
+| Gold Dark | `#92400E` | `--color-gold-dark` |
+| Background | `#FEF2F2` | `--color-bg` |
+| Paper | `#FFF8F0` | `--color-paper` |
+| Text | `#450A0A` | `--color-text` |
+| Text Light | `#7F1D1D` | `--color-text-light` |
 
 ### 字体
 
@@ -272,14 +239,14 @@ curl -X POST http://localhost:3000/v1/models
 - **模块**: ESNext
 - **严格模式**: 启用
 - **模块解析**: bundler
-- **输出目录**: `dist/`（后端）、`frontend/dist/`（前端）
+- **输出目录**: `dist/`
 
 ### 命名约定
 
-- **文件名**: 小写，使用短横线分隔（如 `openai.routes.ts`）
-- **类名**: 大驼峰（如 `OpenAIService`）
-- **接口/类型**: 大驼峰（如 `OpenAIModel`）
-- **函数/变量**: 小驼峰（如 `getModels`）
+- **文件名**: 小写，使用短横线分隔（如 `loading-page.css`）
+- **类名**: 大驼峰（如 `SpringWorkflowService`）
+- **接口/类型**: 大驼峰（如 `SpringFestivalResponse`）
+- **函数/变量**: 小驼峰（如 `generateSpringFestival`）
 
 ### 注释规范
 
@@ -298,49 +265,67 @@ curl -X POST http://localhost:3000/v1/models
 
 ## 常见任务
 
-### 添加新的 API 端点
+### 修改春联生成提示词
 
-1. 在 `src/routes/` 创建新的路由文件
-2. 使用 `createRoute` 定义 OpenAPI 规范
-3. 实现处理函数
-4. 在 `src/index.ts` 中注册路由
+编辑 `src/config/prompts.config.ts` 文件，修改以下常量：
+- `TOPIC_ANALYSIS_SYSTEM_PROMPT` - 主题分析系统提示词
+- `SPRING_GENERATION_SYSTEM_PROMPT` - 春联生成系统提示词
+- `REVIEW_SYSTEM_PROMPT` - 质量审查系统提示词
 
-### 添加新的服务
+### 修改工作流逻辑
 
-1. 在 `src/services/` 创建服务文件
-2. 定义服务类和相关方法
-3. 在路由文件中引入并使用
+编辑 `src/services/spring-workflow.service.ts` 文件，修改 `SpringWorkflowService` 类：
+- `executeWorkflow()` - 主工作流执行逻辑
+- `analyzeTopic()` - 主题分析阶段
+- `generateSpringFestival()` - 春联生成阶段
+- `reviewSpringFestival()` - 质量审查阶段
 
-### 添加类型定义
+### 添加新的前端组件
 
-1. 在 `src/types/` 创建或更新类型文件
-2. 使用 `interface` 或 `type` 定义类型
-3. 在需要的地方导入使用
-
-### 添加前端组件
-
-1. 在 `frontend/src/components/` 创建组件文件
+1. 在 `src/components/` 创建组件文件
 2. 使用 TypeScript + React 编写组件
 3. 遵循设计系统规范（参考 `design-system/`）
 4. 在需要的地方导入使用
 
-### 修改春联生成提示词
+### 添加新的页面
 
-编辑 `src/config/spring-festival.config.ts` 文件，修改 `SPRING_FESTIVAL_SYSTEM_PROMPT` 常量。
+1. 在 `src/pages/` 创建页面组件文件
+2. 更新 `src/routes.tsx` 添加新路由
+3. 遵循设计系统规范
 
-### 部署到 Cloudflare Workers
+### 修改样式
+
+全局样式：编辑 `src/style.css`
+组件样式：编辑对应的 `.css` 文件
+设计系统：更新 `design-system/iflow-码年挥春小摊/MASTER.md`
+
+## 部署到 GitHub Pages
+
+### 1. 配置 vite.config.ts
+
+```typescript
+export default defineConfig({
+  base: '/your-repo-name/',
+  // ...
+})
+```
+
+### 2. 构建项目
 
 ```bash
-npx wrangler deploy
+yarn build
 ```
+
+### 3. 部署
+
+将 `dist` 目录推送到 GitHub Pages，或使用 GitHub Actions 自动部署。
 
 ## 注意事项
 
-- Cloudflare Workers 环境不支持 Node.js 特有 API（如 `fs`、`path`）
-- 使用 `fetch` API 进行 HTTP 请求
-- 环境变量通过 `c.env` 或 `wrangler.toml` 的 `vars` 配置
-- `.dev.vars` 文件不会被提交到 Git（已在 `.gitignore` 中）
-- 前端构建产物通过 Workers Assets 绑定在 `/` 路径下提供服务
-- 使用 Yarn Workspaces 管理依赖时，运行脚本需要指定 workspace
+- 这是一个纯前端项目，无需后端服务器
+- API Key 存储在浏览器 localStorage 中
 - 春联生成需要有效的 LLM API 配置
+- 生成过程中会进行多次 API 调用（工作流）
+- 建议使用具有良好中文能力的模型
+- 控制台日志包含完整的生成过程，便于调试
 - 设计系统变更需同步更新 `design-system/` 目录下的文档
