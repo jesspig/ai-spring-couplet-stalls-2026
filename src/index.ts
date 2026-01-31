@@ -10,7 +10,7 @@ import testRoutes from "./routes/test.routes";
 export interface Env {
   OPENAI_API_KEY?: string;
   OPENAI_BASE_URL?: string;
-  ASSETS?: string;
+  ASSETS?: Fetcher;
 }
 
 const app = new OpenAPIHono<{ Bindings: Env }>();

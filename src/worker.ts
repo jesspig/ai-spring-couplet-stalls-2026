@@ -10,18 +10,17 @@ interface ExecutionContext {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
     const url = new URL(request.url);
-    
+
     if (url.pathname.startsWith("/v1/") || url.pathname.startsWith("/api/") ||
         url.pathname.startsWith("/doc") || url.pathname.startsWith("/swagger-ui") ||
         url.pathname.startsWith("/scalar") || url.pathname.startsWith("/redoc")) {
       return app.fetch(request, env, ctx);
     }
-    
-    try {
-      const assetUrl = new URL(url.pathname, env.ASSETS ?? "");
-      return fetch(assetUrl.toString(), request);
-    } catch {
-      return new Response("Not Found", { status: 404 });
+
+    if (env.ASSETS) {
+      return env.ASSETS.fetch(request);
     }
+
+    return new Response("Not Found", { status: 404 });
   }
 };
