@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import SettingsButton from './components/SettingsButton';
 import './DesignInput.css';
 
@@ -14,20 +15,11 @@ interface ModelsResponse {
   data: Model[];
 }
 
-interface DesignInputProps {
-  onStartDesign: (topic: string, model: string) => void;
-  initialTopic?: string;
-  initialModel?: string;
-}
-
-export default function DesignInput({ 
-  onStartDesign, 
-  initialTopic = '', 
-  initialModel = '' 
-}: DesignInputProps) {
-  const [topic, setTopic] = useState(initialTopic);
+export default function DesignInput() {
+  const navigate = useNavigate();
+  const [topic, setTopic] = useState('');
   const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState(initialModel);
+  const [selectedModel, setSelectedModel] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -107,14 +99,18 @@ export default function DesignInput({
       alert('请选择模型');
       return;
     }
-    onStartDesign(topic.trim(), selectedModel);
+
+    sessionStorage.setItem('topic', topic.trim());
+    sessionStorage.setItem('selectedModel', selectedModel);
+
+    navigate('/loading');
   };
 
   return (
     <div className="design-container">
       <div className="design-card">
         <div className="design-header">
-          <h1 className="design-title">iFlow 码年挥春小摊</h1>
+          <h1 className="design-title">AI 码年挥春小摊</h1>
           <SettingsButton onModelsUpdate={handleModelsUpdate} />
         </div>
         
