@@ -6,7 +6,7 @@
 
 ---
 
-**Project:** iFlow 码年挥春小摊
+**Project:** AI "码"年挥春小摊
 **Generated:** 2026-01-31 21:11:22
 **Category:** Banking/Traditional Finance
 

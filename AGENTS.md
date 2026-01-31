@@ -2,7 +2,7 @@
 
 ## 项目概述
 
-**iFlow 码年挥春小摊** - 基于 AI 的春联创作平台
+**AI "码"年挥春小摊** - 基于 AI 的春联创作平台
 
 这是一个纯前端实现的春联生成应用，利用大语言模型通过三阶段工作流自动创作符合中国传统文化规范的春联（上联、下联、横批）和挥春。项目采用 React + Vite + TypeScript 技术栈，支持多种 OpenAI 兼容 API 服务，可直接部署到 GitHub Pages 等静态托管平台。
 
@@ -72,7 +72,7 @@ trae_demo_04/
 ├── public/
 │   └── vite.svg                  # Vite 图标
 ├── design-system/                # 设计系统
-│   └── iflow-码年挥春小摊/
+│   └── ai-码年挥春小摊/
 │       └── MASTER.md             # 设计系统主文档
 ├── index.html                    # HTML 模板
 ├── package.json                  # 项目配置
@@ -222,7 +222,7 @@ yarn preview
 
 ### 组件规范
 
-详细的设计规范请参考 `design-system/iflow-码年挥春小摊/MASTER.md`
+详细的设计规范请参考 `design-system/ai-码年挥春小摊/MASTER.md`
 
 ## 开发规范
 
@@ -297,7 +297,7 @@ yarn preview
 
 全局样式：编辑 `src/style.css`
 组件样式：编辑对应的 `.css` 文件
-设计系统：更新 `design-system/iflow-码年挥春小摊/MASTER.md`
+设计系统：更新 `design-system/ai-码年挥春小摊/MASTER.md`
 
 ## 部署到 GitHub Pages
 

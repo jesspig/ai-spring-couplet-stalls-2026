@@ -1,4 +1,4 @@
-# iFlow 码年挥春小摊
+# AI "码"年挥春小摊
 
 基于 AI 的春联创作平台，利用大语言模型通过三阶段工作流自动创作符合中国传统文化规范的春联和挥春。
 
@@ -133,7 +133,7 @@ yarn preview
 ├── public/
 │   └── vite.svg
 ├── design-system/            # 设计系统
-│   └── iflow-码年挥春小摊/
+│   └── ai-码年挥春小摊/
 │       └── MASTER.md         # 设计规范文档
 ├── index.html                # HTML 模板
 ├── package.json
@@ -178,4 +178,4 @@ yarn build
 ## 更多信息
 
 - 详细开发规范请参阅 [AGENTS.md](./AGENTS.md)
-- 设计系统规范请参阅 [design-system/iflow-码年挥春小摊/MASTER.md](./design-system/iflow-码年挥春小摊/MASTER.md)
+- 设计系统规范请参阅 [design-system/ai-码年挥春小摊/MASTER.md](./design-system/ai-码年挥春小摊/MASTER.md)
