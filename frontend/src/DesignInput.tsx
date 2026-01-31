@@ -50,6 +50,7 @@ export default function DesignInput() {
 
   return (
     <div className="design-container">
+      <h1 className="design-title">iFlow 码年挥春小摊</h1>
       <textarea
         className="design-textarea"
         placeholder="请输入一个主题"
