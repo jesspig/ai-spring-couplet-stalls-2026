@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SpringWorkflowService } from '../services/spring-workflow.service';
 import './LoadingPage.css';
 
 const loadingMessages = [
@@ -39,31 +40,27 @@ export default function LoadingPage() {
       const apiUrl = localStorage.getItem('apiUrl') || '';
       const apiKey = localStorage.getItem('apiKey') || '';
 
+      if (!apiUrl || !apiKey) {
+        const message = '请先在设置中配置 API';
+        setError(message);
+        setTimeout(() => {
+          alert(message);
+          navigate('/');
+        }, 1500);
+        return;
+      }
+
       try {
-        const response = await fetch('/v1/spring-festival/generate', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            topic: storedTopic,
-            model: selectedModel,
-            apiUrl,
-            apiKey,
-            wordCount,
-            coupletOrder,
-            horizontalDirection,
-            fuOrientation
-          })
-        });
+        console.log('\n=== 开始春联生成工作流 ===');
+        console.log(`主题：${storedTopic}`);
+        console.log(`字数：${wordCount}字`);
 
-        const data = await response.json();
+        const workflowService = new SpringWorkflowService(apiUrl, apiKey, selectedModel);
+        const result = await workflowService.executeWorkflow(storedTopic, wordCount, false);
 
-        if (!response.ok) {
-          throw new Error(data.error?.message || '生成失败');
-        }
+        sessionStorage.setItem('generatedData', JSON.stringify(result));
 
-        sessionStorage.setItem('generatedData', JSON.stringify(data));
+        console.log('\n=== 春联生成成功 ===');
 
         setTimeout(() => {
           navigate('/display');
@@ -71,6 +68,7 @@ export default function LoadingPage() {
       } catch (err) {
         const message = err instanceof Error ? err.message : '生成失败，请重试';
         setError(message);
+        console.error('春联生成失败：', message);
         setTimeout(() => {
           alert(message);
           navigate('/');

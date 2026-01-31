@@ -54,12 +54,13 @@ export default function DesignInput() {
       return;
     }
 
-    fetch('/v1/models', {
-      method: 'POST',
+    const baseUrl = apiUrl.replace(/\/$/, '');
+    fetch(`${baseUrl}/v1/models`, {
+      method: 'GET',
       headers: {
+        'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ apiUrl, apiKey })
+      }
     })
       .then(res => res.json())
       .then((data: ModelsResponse) => {
@@ -119,7 +120,7 @@ export default function DesignInput() {
     <div className="design-container">
       <div className="design-card">
         <div className="design-header">
-          <h1 className="design-title">AI “码”年挥春小摊</h1>
+          <h1 className="design-title">AI "码"年挥春小摊</h1>
           <SettingsButton onModelsUpdate={handleModelsUpdate} />
         </div>
         

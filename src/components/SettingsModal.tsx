@@ -70,26 +70,24 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
     setModels([]);
 
     try {
-      const response = await fetch('/api/test-models', {
-        method: 'POST',
+      const baseUrl = apiUrl.replace(/\/$/, '');
+      const response = await fetch(`${baseUrl}/v1/models`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          baseUrl: apiUrl,
-          apiKey: apiKey,
-        }),
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
       });
 
       const data = await response.json();
 
-      if (response.ok && data.success) {
+      if (response.ok && data.data) {
         setTestStatus('success');
-        setTestMessage(`连接成功！获取到 ${data.models.length} 个模型`);
-        setModels(data.models);
+        setTestMessage(`连接成功！获取到 ${data.data.length} 个模型`);
+        setModels(data.data);
       } else {
         setTestStatus('error');
-        setTestMessage(data.error || '连接失败');
+        setTestMessage(data.error?.message || '连接失败');
       }
     } catch (error) {
       setTestStatus('error');
