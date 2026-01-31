@@ -49,22 +49,41 @@ export class SpringWorkflowService {
     const maxAttempts = 3;
     let attempt = 0;
     let lastErrors: string[] = [];
+    let lastResult: SpringFestivalResponse | undefined;
+    let lastReview: ReviewResult | undefined;
+    let previousResults: SpringFestivalResponse[] = [];
+    let previousReviews: ReviewResult[] = [];
 
     while (attempt < maxAttempts) {
       attempt++;
 
+      console.log(`\n[工作流] 开始第 ${attempt}/${maxAttempts} 次尝试`);
+
       // 阶段1：主题分析
       const analysis = await this.analyzeTopic(topic);
 
-      // 阶段2：春联生成
+      // 阶段2：春联生成（传递上一次的结果和审查信息）
       const springFestival = await this.generateSpringFestival(
         topic,
         analysis,
-        lastErrors.length > 0 ? lastErrors : undefined
+        lastErrors.length > 0 ? lastErrors : undefined,
+        lastResult,
+        lastReview
       );
 
-      // 阶段3：审查
-      const review = await this.reviewSpringFestival(topic, springFestival);
+      // 阶段3：审查（传递历史记录以保持一致性）
+      const review = await this.reviewSpringFestival(
+        topic,
+        springFestival,
+        previousResults,
+        previousReviews
+      );
+
+      console.log(`[工作流] 第 ${attempt} 次审查结果: ${review.passed ? '通过' : '未通过'}`);
+
+      // 记录历史
+      previousResults.push(springFestival);
+      previousReviews.push(review);
 
       if (review.passed) {
         const result: WorkflowResponse = {
@@ -75,11 +94,14 @@ export class SpringWorkflowService {
           result.analysis = analysis;
         }
 
+        console.log(`[工作流] 成功生成春联，共尝试 ${attempt} 次`);
         return result;
       }
 
-      // 记录错误信息用于下次生成
+      // 记录错误信息、生成结果和审查结果用于下次生成
       lastErrors = review.errors.map(e => e.message);
+      lastResult = springFestival;
+      lastReview = review;
     }
 
     throw new Error(`春联生成失败：经过${maxAttempts}次尝试仍未通过审查`);
@@ -102,14 +124,24 @@ export class SpringWorkflowService {
    * @param topic 原始主题
    * @param analysis 主题分析结果
    * @param previousErrors 之前的错误信息（用于改进）
+   * @param previousResult 上一次生成的春联内容（用于参考和改进）
+   * @param previousReview 上一次的审查结果（用于了解具体问题）
    * @returns 春联生成结果
    */
   async generateSpringFestival(
     topic: string,
     analysis: TopicAnalysisResult,
-    previousErrors?: string[]
+    previousErrors?: string[],
+    previousResult?: SpringFestivalResponse,
+    previousReview?: ReviewResult
   ): Promise<SpringFestivalResponse> {
-    const userPrompt = buildGenerationPrompt(topic, analysis, previousErrors);
+    const userPrompt = buildGenerationPrompt(
+      topic,
+      analysis,
+      previousErrors,
+      previousResult,
+      previousReview
+    );
     const content = await this.callLLM(SPRING_GENERATION_SYSTEM_PROMPT, userPrompt, 0.8);
 
     return this.parseSpringResult(content);
@@ -119,13 +151,23 @@ export class SpringWorkflowService {
    * 阶段3：审查春联质量
    * @param topic 原始主题
    * @param result 春联生成结果
+   * @param previousResults 之前生成的春联内容（用于参考）
+   * @param previousReviews 之前的审查结果（用于保持一致性）
    * @returns 审查结果
    */
   async reviewSpringFestival(
     topic: string,
-    result: SpringFestivalResponse
+    result: SpringFestivalResponse,
+    previousResults?: SpringFestivalResponse[],
+    previousReviews?: ReviewResult[]
   ): Promise<ReviewResult> {
-    const userPrompt = buildReviewPrompt(topic, result);
+    console.log(`[工作流] 审查历史记录数量: ${previousResults?.length || 0}`);
+    const userPrompt = buildReviewPrompt(
+      topic,
+      result,
+      previousResults,
+      previousReviews
+    );
     const content = await this.callLLM(REVIEW_SYSTEM_PROMPT, userPrompt, 0.3);
 
     return this.parseReviewResult(content);
@@ -145,32 +187,56 @@ export class SpringWorkflowService {
   ): Promise<string> {
     const url = `${this.config.baseUrl}/v1/chat/completions`;
 
+    // 构建请求体
+    const requestBody = {
+      model: this.config.model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature,
+      max_tokens: 800
+    };
+
+    // 输出请求信息
+    console.log("\n[LLM请求] ==========================================");
+    console.log(`[LLM请求] URL: ${url}`);
+    console.log(`[LLM请求] Model: ${this.config.model}`);
+    console.log(`[LLM请求] Temperature: ${temperature}`);
+    console.log(`[LLM请求] SystemPrompt长度: ${systemPrompt.length} 字符`);
+    console.log(`[LLM请求] UserPrompt长度: ${userPrompt.length} 字符`);
+    console.log("[LLM请求] Request Body:");
+    console.log(JSON.stringify(requestBody, null, 2));
+
     const response = await fetch(url, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${this.config.apiKey}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        temperature,
-        max_tokens: 800
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
       const errorText = await response.text();
+      console.error(`[LLM响应] 请求失败: ${response.status} ${errorText}`);
       throw new Error(`LLM请求失败: ${response.status} ${errorText}`);
     }
 
     const data = await response.json() as {
       choices?: Array<{ message?: { content?: string } }>;
+      usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number };
     };
     const content = data.choices?.[0]?.message?.content;
+
+    // 输出响应信息
+    console.log("\n[LLM响应] ==========================================");
+    if (data.usage) {
+      console.log(`[LLM响应] Token使用: prompt=${data.usage.prompt_tokens}, completion=${data.usage.completion_tokens}, total=${data.usage.total_tokens}`);
+    }
+    console.log("[LLM响应] Content:");
+    console.log(content);
+    console.log("[LLM响应] ==========================================\n");
 
     if (!content) {
       throw new Error("LLM返回内容为空");
