@@ -283,7 +283,7 @@ const generateSpringFestivalRoute = createRoute({
 
 const generateSpringFestivalHandler = async (c: any) => {
   const body = await c.req.json();
-  const { topic, model, apiUrl: requestApiUrl, apiKey: requestApiKey, includeAnalysis } = body;
+  const { topic, model, apiUrl: requestApiUrl, apiKey: requestApiKey, includeAnalysis, wordCount } = body;
 
   if (!topic || !model) {
     return c.json({
@@ -309,9 +309,8 @@ const generateSpringFestivalHandler = async (c: any) => {
   }
 
   try {
-    // 使用新的两阶段工作流服务
     const workflowService = new SpringWorkflowService(baseUrl, apiKey, model);
-    const result = await workflowService.executeWorkflow(topic, includeAnalysis === true);
+    const result = await workflowService.executeWorkflow(topic, includeAnalysis === true, wordCount);
 
     return c.json(result);
   } catch (error) {

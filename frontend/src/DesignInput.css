@@ -79,6 +79,55 @@
   color: #999;
 }
 
+.design-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin: 24px 0;
+}
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.option-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.option-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.option-btn {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-family: 'Noto Sans SC', sans-serif;
+  border: 2px solid var(--color-gold);
+  border-radius: 6px;
+  background: white;
+  color: var(--color-text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.option-btn:hover {
+  border-color: var(--color-primary);
+  background: #fff5f5;
+}
+
+.option-btn.active {
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
+}
+
 .design-footer {
   display: flex;
   justify-content: space-between;
@@ -157,6 +206,20 @@
 
   .design-title {
     font-size: 1.5rem;
+  }
+
+  .design-options {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .option-buttons {
+    gap: 6px;
+  }
+
+  .option-btn {
+    padding: 8px 12px;
+    font-size: 13px;
   }
 
   .design-footer {

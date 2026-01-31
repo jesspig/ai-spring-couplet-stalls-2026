@@ -48,8 +48,6 @@
   font-weight: 700;
   color: #FFD700;
   letter-spacing: 0.3em;
-  direction: rtl;
-  unicode-bidi: bidi-override;
 }
 
 /* 对联区域 */
@@ -60,7 +58,6 @@
   gap: 48px;
   width: 100%;
   padding: 20px 0;
-  flex-direction: row-reverse;
 }
 
 .couplet-wrapper {

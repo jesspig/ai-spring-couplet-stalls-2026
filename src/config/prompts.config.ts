@@ -142,6 +142,7 @@ export const SPRING_GENERATION_SYSTEM_PROMPT = `你是一位精通中国传统�
  * @param previousErrors 之前的错误信息（用于改进）
  * @param previousResult 上一次生成的春联内容（用于参考和改进）
  * @param previousReview 上一次的审查结果（用于了解具体问题）
+ * @param wordCount 对联字数（5、7、9）
  * @returns 春联生成用户提示词
  */
 export function buildGenerationPrompt(
@@ -149,7 +150,8 @@ export function buildGenerationPrompt(
   analysis: TopicAnalysisResult,
   previousErrors?: string[],
   previousResult?: SpringFestivalResponse,
-  previousReview?: ReviewResult
+  previousReview?: ReviewResult,
+  wordCount = '7'
 ): string {
   const horseYearSection = analysis.horseYearElements?.length
     ? `\n### 马年元素\n${analysis.horseYearElements.join('、')}`
@@ -170,6 +172,9 @@ export function buildGenerationPrompt(
 
 ## 时间背景
 2026年为农历丙午年，生肖属马。可适当融入马年或程序员相关元素，但不必强求，以通顺和工整为前提。
+
+## 字数要求
+对联上下联必须为${wordCount}字，这是硬性要求，必须严格遵守。
 
 ## 创作指导（基于主题深度分析）
 
@@ -201,7 +206,7 @@ ${previousSection}
 
 ### 春联要求
 1. **最高优先级**：通顺自然、对仗工整、意境优美
-2. **字数要求**：上下联字数相等，必须为单数（5字、7字或9字），**忌双数**
+2. **字数要求**：上下联字数相等，必须为${wordCount}字，**这是硬性要求**
 3. **平仄规则（必须严格遵守）**：
    - 上联末字必为仄声（三声、四声）
    - 下联末字必为平声（一声、二声）
@@ -369,13 +374,15 @@ export const REVIEW_SYSTEM_PROMPT = `你是一位精通中国传统文化和春�
  * @param result 春联生成结果
  * @param previousResults 之前生成的春联内容（用于参考）
  * @param previousReviews 之前的审查结果（用于保持一致性）
+ * @param wordCount 对联字数（5、7、9）
  * @returns 审查用户提示词
  */
 export function buildReviewPrompt(
   topic: string,
   result: SpringFestivalResponse,
   previousResults?: SpringFestivalResponse[],
-  previousReviews?: ReviewResult[]
+  previousReviews?: ReviewResult[],
+  wordCount = '7'
 ): string {
   let historySection = '';
   if (previousResults && previousReviews && previousResults.length > 0) {
@@ -389,6 +396,9 @@ export function buildReviewPrompt(
 
 ## 时间背景
 2026年为农历丙午年（马年），可适当融入马年或程序员元素，但不必强求。
+
+## 字数要求
+对联上下联必须为${wordCount}字，这是硬性要求，必须严格遵守。
 
 ## 原始主题
 ${topic}
@@ -410,7 +420,7 @@ ${historySection}
 ## 审查要点
 
 ### 春联审查
-1. **字数检查**：上下联字数是否相等，是否为单数（5字、7字、9字）
+1. **字数检查**：上下联字数是否相等，是否为${wordCount}字
 2. **平仄检查**：上联末字是否为仄声（三声、四声），下联末字是否为平声（一声、二声）
 3. **对仗检查**：词性是否相对，结构是否相应
 4. **意义检查**：上下联是否呼应，是否合掌（同义重复）

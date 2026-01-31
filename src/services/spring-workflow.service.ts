@@ -40,11 +40,13 @@ export class SpringWorkflowService {
    * 执行完整的三阶段工作流
    * @param topic 用户输入的主题
    * @param includeAnalysis 是否在响应中包含分析结果
+   * @param wordCount 对联字数（5、7、9）
    * @returns 春联生成结果
    */
   async executeWorkflow(
     topic: string,
-    includeAnalysis = false
+    includeAnalysis = false,
+    wordCount = '7'
   ): Promise<WorkflowResponse> {
     const maxAttempts = 3;
     let attempt = 0;
@@ -59,29 +61,27 @@ export class SpringWorkflowService {
 
       console.log(`\n[工作流] 开始第 ${attempt}/${maxAttempts} 次尝试`);
 
-      // 阶段1：主题分析
       const analysis = await this.analyzeTopic(topic);
 
-      // 阶段2：春联生成（传递上一次的结果和审查信息）
       const springFestival = await this.generateSpringFestival(
         topic,
         analysis,
         lastErrors.length > 0 ? lastErrors : undefined,
         lastResult,
-        lastReview
+        lastReview,
+        wordCount
       );
 
-      // 阶段3：审查（传递历史记录以保持一致性）
       const review = await this.reviewSpringFestival(
         topic,
         springFestival,
         previousResults,
-        previousReviews
+        previousReviews,
+        wordCount
       );
 
       console.log(`[工作流] 第 ${attempt} 次审查结果: ${review.passed ? '通过' : '未通过'}`);
 
-      // 记录历史
       previousResults.push(springFestival);
       previousReviews.push(review);
 
@@ -98,7 +98,6 @@ export class SpringWorkflowService {
         return result;
       }
 
-      // 记录错误信息、生成结果和审查结果用于下次生成
       lastErrors = review.errors.map(e => e.message);
       lastResult = springFestival;
       lastReview = review;
@@ -126,6 +125,7 @@ export class SpringWorkflowService {
    * @param previousErrors 之前的错误信息（用于改进）
    * @param previousResult 上一次生成的春联内容（用于参考和改进）
    * @param previousReview 上一次的审查结果（用于了解具体问题）
+   * @param wordCount 对联字数（5、7、9）
    * @returns 春联生成结果
    */
   async generateSpringFestival(
@@ -133,14 +133,16 @@ export class SpringWorkflowService {
     analysis: TopicAnalysisResult,
     previousErrors?: string[],
     previousResult?: SpringFestivalResponse,
-    previousReview?: ReviewResult
+    previousReview?: ReviewResult,
+    wordCount = '7'
   ): Promise<SpringFestivalResponse> {
     const userPrompt = buildGenerationPrompt(
       topic,
       analysis,
       previousErrors,
       previousResult,
-      previousReview
+      previousReview,
+      wordCount
     );
     const content = await this.callLLM(SPRING_GENERATION_SYSTEM_PROMPT, userPrompt, 0.8);
 
@@ -153,20 +155,23 @@ export class SpringWorkflowService {
    * @param result 春联生成结果
    * @param previousResults 之前生成的春联内容（用于参考）
    * @param previousReviews 之前的审查结果（用于保持一致性）
+   * @param wordCount 对联字数（5、7、9）
    * @returns 审查结果
    */
   async reviewSpringFestival(
     topic: string,
     result: SpringFestivalResponse,
     previousResults?: SpringFestivalResponse[],
-    previousReviews?: ReviewResult[]
+    previousReviews?: ReviewResult[],
+    wordCount = '7'
   ): Promise<ReviewResult> {
     console.log(`[工作流] 审查历史记录数量: ${previousResults?.length || 0}`);
     const userPrompt = buildReviewPrompt(
       topic,
       result,
       previousResults,
-      previousReviews
+      previousReviews,
+      wordCount
     );
     const content = await this.callLLM(REVIEW_SYSTEM_PROMPT, userPrompt, 0.3);
 

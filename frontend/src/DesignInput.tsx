@@ -23,6 +23,11 @@ export default function DesignInput() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
+  const [wordCount, setWordCount] = useState('7');
+  const [coupletOrder, setCoupletOrder] = useState('rightUpper');
+  const [horizontalDirection, setHorizontalDirection] = useState('rightToLeft');
+  const [fuOrientation, setFuOrientation] = useState('upright');
+
   useEffect(() => {
     const apiUrl = localStorage.getItem('apiUrl') || '';
     const apiKey = localStorage.getItem('apiKey') || '';
@@ -102,6 +107,10 @@ export default function DesignInput() {
 
     sessionStorage.setItem('topic', topic.trim());
     sessionStorage.setItem('selectedModel', selectedModel);
+    sessionStorage.setItem('wordCount', wordCount);
+    sessionStorage.setItem('coupletOrder', coupletOrder);
+    sessionStorage.setItem('horizontalDirection', horizontalDirection);
+    sessionStorage.setItem('fuOrientation', fuOrientation);
 
     navigate('/loading');
   };
@@ -110,7 +119,7 @@ export default function DesignInput() {
     <div className="design-container">
       <div className="design-card">
         <div className="design-header">
-          <h1 className="design-title">AI 码年挥春小摊</h1>
+          <h1 className="design-title">AI “码”年挥春小摊</h1>
           <SettingsButton onModelsUpdate={handleModelsUpdate} />
         </div>
         
@@ -123,6 +132,86 @@ export default function DesignInput() {
           onChange={(e) => setTopic(e.target.value)}
           maxLength={50}
         />
+
+        <div className="design-options">
+          <div className="option-group">
+            <label className="option-label">字数</label>
+            <div className="option-buttons">
+              <button
+                className={`option-btn ${wordCount === '5' ? 'active' : ''}`}
+                onClick={() => setWordCount('5')}
+              >
+                5字
+              </button>
+              <button
+                className={`option-btn ${wordCount === '7' ? 'active' : ''}`}
+                onClick={() => setWordCount('7')}
+              >
+                7字
+              </button>
+              <button
+                className={`option-btn ${wordCount === '9' ? 'active' : ''}`}
+                onClick={() => setWordCount('9')}
+              >
+                9字
+              </button>
+            </div>
+          </div>
+
+          <div className="option-group">
+            <label className="option-label">对联顺序</label>
+            <div className="option-buttons">
+              <button
+                className={`option-btn ${coupletOrder === 'leftUpper' ? 'active' : ''}`}
+                onClick={() => setCoupletOrder('leftUpper')}
+              >
+                左上右下
+              </button>
+              <button
+                className={`option-btn ${coupletOrder === 'rightUpper' ? 'active' : ''}`}
+                onClick={() => setCoupletOrder('rightUpper')}
+              >
+                右上左下
+              </button>
+            </div>
+          </div>
+
+          <div className="option-group">
+            <label className="option-label">横批方向</label>
+            <div className="option-buttons">
+              <button
+                className={`option-btn ${horizontalDirection === 'leftToRight' ? 'active' : ''}`}
+                onClick={() => setHorizontalDirection('leftToRight')}
+              >
+                左到右
+              </button>
+              <button
+                className={`option-btn ${horizontalDirection === 'rightToLeft' ? 'active' : ''}`}
+                onClick={() => setHorizontalDirection('rightToLeft')}
+              >
+                右到左
+              </button>
+            </div>
+          </div>
+
+          <div className="option-group">
+            <label className="option-label">福字方向</label>
+            <div className="option-buttons">
+              <button
+                className={`option-btn ${fuOrientation === 'upright' ? 'active' : ''}`}
+                onClick={() => setFuOrientation('upright')}
+              >
+                正贴
+              </button>
+              <button
+                className={`option-btn ${fuOrientation === 'inverted' ? 'active' : ''}`}
+                onClick={() => setFuOrientation('inverted')}
+              >
+                倒贴
+              </button>
+            </div>
+          </div>
+        </div>
         
         <div className="design-footer">
           <div className="model-selector">

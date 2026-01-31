@@ -19,6 +19,10 @@ export default function LoadingPage() {
   useEffect(() => {
     const storedTopic = sessionStorage.getItem('topic');
     const selectedModel = sessionStorage.getItem('selectedModel');
+    const wordCount = sessionStorage.getItem('wordCount') || '7';
+    const coupletOrder = sessionStorage.getItem('coupletOrder') || 'leftUpper';
+    const horizontalDirection = sessionStorage.getItem('horizontalDirection') || 'leftToRight';
+    const fuOrientation = sessionStorage.getItem('fuOrientation') || 'upright';
 
     if (!storedTopic || !selectedModel) {
       navigate('/');
@@ -45,7 +49,11 @@ export default function LoadingPage() {
             topic: storedTopic,
             model: selectedModel,
             apiUrl,
-            apiKey
+            apiKey,
+            wordCount,
+            coupletOrder,
+            horizontalDirection,
+            fuOrientation
           })
         });
 
