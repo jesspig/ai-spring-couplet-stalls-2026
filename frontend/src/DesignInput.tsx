@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import SettingsButton from './components/SettingsButton';
+import './DesignInput.css';
 
 interface Model {
   id: string;
@@ -13,38 +14,86 @@ interface ModelsResponse {
   data: Model[];
 }
 
-export default function DesignInput() {
-  const [topic, setTopic] = useState('');
+interface DesignInputProps {
+  onStartDesign: (topic: string, model: string) => void;
+  initialTopic?: string;
+  initialModel?: string;
+}
+
+export default function DesignInput({ 
+  onStartDesign, 
+  initialTopic = '', 
+  initialModel = '' 
+}: DesignInputProps) {
+  const [topic, setTopic] = useState(initialTopic);
   const [models, setModels] = useState<Model[]>([]);
-  const [selectedModel, setSelectedModel] = useState('');
+  const [selectedModel, setSelectedModel] = useState(initialModel);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    fetch('/v1/models')
+    const apiUrl = localStorage.getItem('apiUrl') || '';
+    const apiKey = localStorage.getItem('apiKey') || '';
+
+    const cachedModels = localStorage.getItem('cachedModels');
+    const cachedSelectedModel = localStorage.getItem('cachedSelectedModel');
+
+    if (cachedModels) {
+      try {
+        const parsedModels = JSON.parse(cachedModels);
+        setModels(parsedModels);
+        if (parsedModels.length > 0 && !selectedModel) {
+          setSelectedModel(cachedSelectedModel || parsedModels[0].id);
+        }
+        setLoading(false);
+      } catch (e) {
+        console.error('解析缓存的模型列表失败', e);
+      }
+    }
+
+    if (!apiUrl || !apiKey) {
+      setError(true);
+      setLoading(false);
+      return;
+    }
+
+    fetch('/v1/models', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ apiUrl, apiKey })
+    })
       .then(res => res.json())
       .then((data: ModelsResponse) => {
-        setModels(data.data || []);
-        if (data.data && data.data.length > 0) {
-          setSelectedModel(data.data[0].id);
+        const newModels = data.data || [];
+        setModels(newModels);
+        localStorage.setItem('cachedModels', JSON.stringify(newModels));
+        if (newModels.length > 0) {
+          const modelToSelect = selectedModel || cachedSelectedModel || newModels[0].id;
+          setSelectedModel(modelToSelect);
+          localStorage.setItem('cachedSelectedModel', modelToSelect);
         }
         setLoading(false);
       })
       .catch(() => {
-        setError(true);
+        if (!cachedModels) {
+          setError(true);
+        }
         setLoading(false);
       });
   }, []);
 
-  // 处理模型列表更新
   const handleModelsUpdate = (newModels: Model[]) => {
     setModels(newModels);
+    localStorage.setItem('cachedModels', JSON.stringify(newModels));
     setError(false);
-    // 如果当前选中的模型不在新列表中，选择第一个
     if (newModels.length > 0) {
       const currentExists = newModels.some(m => m.id === selectedModel);
       if (!currentExists) {
-        setSelectedModel(newModels[0].id);
+        const newSelectedModel = newModels[0].id;
+        setSelectedModel(newSelectedModel);
+        localStorage.setItem('cachedSelectedModel', newSelectedModel);
       }
     }
   };
@@ -58,45 +107,62 @@ export default function DesignInput() {
       alert('请选择模型');
       return;
     }
-    console.log('主题:', topic, '模型:', selectedModel);
-    // TODO: 开始设计逻辑
+    onStartDesign(topic.trim(), selectedModel);
   };
 
   return (
     <div className="design-container">
-      <div className="design-header">
-        <h1 className="design-title">iFlow 码年挥春小摊</h1>
-        <SettingsButton onModelsUpdate={handleModelsUpdate} />
-      </div>
-      <textarea
-        className="design-textarea"
-        placeholder="请输入一个主题"
-        value={topic}
-        onChange={(e) => setTopic(e.target.value)}
-      />
-      <div className="design-footer">
-        <div className="model-selector">
-          {loading ? (
-            <span>加载中...</span>
-          ) : error || models.length === 0 ? (
-            <span>暂未配置模型</span>
-          ) : (
-            <select
-              value={selectedModel}
-              onChange={(e) => setSelectedModel(e.target.value)}
-              className="model-select"
-            >
-              {models.map(model => (
-                <option key={model.id} value={model.id}>
-                  {model.id}
-                </option>
-              ))}
-            </select>
-          )}
+      <div className="design-card">
+        <div className="design-header">
+          <h1 className="design-title">iFlow 码年挥春小摊</h1>
+          <SettingsButton onModelsUpdate={handleModelsUpdate} />
         </div>
-        <button className="design-button" onClick={handleStartDesign}>
-          开始设计
-        </button>
+        
+        <p className="design-subtitle">输入一个主题，AI为您创作专属春联</p>
+        
+        <textarea
+          className="design-textarea"
+          placeholder="请输入一个主题，例如：马年、科技、家庭、事业..."
+          value={topic}
+          onChange={(e) => setTopic(e.target.value)}
+          maxLength={50}
+        />
+        
+        <div className="design-footer">
+          <div className="model-selector">
+            {loading ? (
+              <span className="model-status">加载模型中...</span>
+            ) : error || models.length === 0 ? (
+              <span className="model-status error">暂未配置模型，请点击设置</span>
+            ) : (
+              <select
+                value={selectedModel}
+                onChange={(e) => {
+                  setSelectedModel(e.target.value);
+                  localStorage.setItem('cachedSelectedModel', e.target.value);
+                }}
+                className="model-select"
+              >
+                {models.map(model => (
+                  <option key={model.id} value={model.id}>
+                    {model.id}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+          <button className="btn-primary" onClick={handleStartDesign}>
+            开始设计
+          </button>
+        </div>
+      </div>
+      
+      {/* 装饰元素 */}
+      <div className="decorations">
+        <span className="deco-item"><span>春</span></span>
+        <span className="deco-item"><span>节</span></span>
+        <span className="deco-item"><span>快</span></span>
+        <span className="deco-item"><span>乐</span></span>
       </div>
     </div>
   );
