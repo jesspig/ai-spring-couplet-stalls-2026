@@ -1,11 +1,7 @@
 import { OpenAPIHono, createRoute, z } from "@hono/zod-openapi";
 import { OpenAIService } from "../services/openai.service";
+import { SpringWorkflowService } from "../services/spring-workflow.service";
 import type { OpenAIModel } from "../types/openai";
-import {
-  SPRING_FESTIVAL_SYSTEM_PROMPT,
-  buildUserPrompt,
-  type SpringFestivalResponse
-} from "../config/spring-festival.config";
 
 interface Env {
   OPENAI_API_KEY?: string;
@@ -208,19 +204,27 @@ const generateSpringFestivalRoute = createRoute({
   method: "post",
   path: "/v1/spring-festival/generate",
   tags: ["SpringFestival"],
-  summary: "生成春联和挥春",
+  summary: "生成春联和挥春（两阶段工作流）",
   description: `
-根据用户提供的主题，生成一副春联（上联、下联、横批）以及四个挥春。
+根据用户提供的主题，通过两阶段工作流生成春联和挥春。
+
+## 工作流说明
+1. **阶段1 - 主题分析**：LLM深入分析主题，提取文化意象、关键词汇、对仗方向等
+2. **阶段2 - 春联生成**：基于分析结果生成结构化的春联和挥春
+
+这种两阶段方式能够生成更具文化内涵和创意性的春联作品。
 
 ## 请求参数
 - topic: 主题内容，如"龙年"、"科技"、"家庭"等
 - model: 使用的模型ID
+- includeAnalysis: 是否在响应中包含主题分析结果（可选，默认false）
 
 ## 响应内容
 - upperCouplet: 上联
 - lowerCouplet: 下联
 - horizontalScroll: 横批
 - springScrolls: 四个挥春
+- analysis: 主题分析结果（仅当includeAnalysis为true时返回）
   `,
   request: {
     body: {
@@ -230,7 +234,8 @@ const generateSpringFestivalRoute = createRoute({
             topic: z.string().min(1).max(50).describe("主题内容"),
             model: z.string().min(1).describe("模型ID"),
             apiUrl: z.string().optional().describe("API URL"),
-            apiKey: z.string().optional().describe("API Key")
+            apiKey: z.string().optional().describe("API Key"),
+            includeAnalysis: z.boolean().optional().describe("是否包含主题分析结果")
           })
         }
       }
@@ -245,7 +250,24 @@ const generateSpringFestivalRoute = createRoute({
             upperCouplet: z.string().describe("上联"),
             lowerCouplet: z.string().describe("下联"),
             horizontalScroll: z.string().describe("横批"),
-            springScrolls: z.array(z.string()).describe("四个挥春")
+            springScrolls: z.array(z.string()).describe("四个挥春"),
+            analysis: z.object({
+              themeCore: z.string().describe("主题核心"),
+              culturalImagery: z.array(z.string()).describe("文化意象"),
+              emotionalTone: z.string().describe("情感基调"),
+              keyNouns: z.array(z.string()).describe("核心名词"),
+              keyVerbs: z.array(z.string()).describe("核心动词"),
+              keyAdjectives: z.array(z.string()).describe("核心形容词"),
+              coupletPairs: z.array(z.object({
+                upper: z.string(),
+                lower: z.string()
+              })).describe("对仗方向"),
+              horizontalDirection: z.string().describe("横批方向"),
+              scrollThemes: z.array(z.object({
+                theme: z.string(),
+                keywords: z.array(z.string())
+              })).describe("挥春主题")
+            }).optional().describe("主题分析结果")
           })
         }
       }
@@ -261,7 +283,7 @@ const generateSpringFestivalRoute = createRoute({
 
 const generateSpringFestivalHandler = async (c: any) => {
   const body = await c.req.json();
-  const { topic, model, apiUrl: requestApiUrl, apiKey: requestApiKey } = body;
+  const { topic, model, apiUrl: requestApiUrl, apiKey: requestApiKey, includeAnalysis } = body;
 
   if (!topic || !model) {
     return c.json({
@@ -287,66 +309,9 @@ const generateSpringFestivalHandler = async (c: any) => {
   }
 
   try {
-    const userPrompt = buildUserPrompt(topic);
-
-    const response = await fetch(`${baseUrl}/v1/chat/completions`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model,
-        messages: [
-          { role: "system", content: SPRING_FESTIVAL_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt }
-        ],
-        temperature: 0.8,
-        max_tokens: 500
-      })
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`LLM请求失败: ${response.status} ${errorText}`);
-    }
-
-    const data = await response.json() as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("LLM返回内容为空");
-    }
-
-    // 解析JSON响应
-    let result: SpringFestivalResponse;
-    try {
-      // 尝试直接解析
-      result = JSON.parse(content);
-    } catch {
-      // 尝试从markdown代码块中提取
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
-                        content.match(/```\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[1].trim());
-      } else {
-        // 尝试提取花括号内的内容
-        const braceMatch = content.match(/\{[\s\S]*\}/);
-        if (braceMatch) {
-          result = JSON.parse(braceMatch[0]);
-        } else {
-          throw new Error("无法解析LLM返回的JSON");
-        }
-      }
-    }
-
-    // 验证响应结构
-    if (!result.upperCouplet || !result.lowerCouplet ||
-        !result.horizontalScroll || !Array.isArray(result.springScrolls)) {
-      throw new Error("LLM返回的数据结构不完整");
-    }
+    // 使用新的两阶段工作流服务
+    const workflowService = new SpringWorkflowService(baseUrl, apiKey, model);
+    const result = await workflowService.executeWorkflow(topic, includeAnalysis === true);
 
     return c.json(result);
   } catch (error) {
