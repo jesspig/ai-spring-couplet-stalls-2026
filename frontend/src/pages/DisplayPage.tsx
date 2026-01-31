@@ -28,9 +28,9 @@ export default function DisplayPage({ data, topic, onReset }: DisplayPageProps) 
           </div>
         </div>
 
-        {/* 中间区域：上联、福字、下联 */}
+        {/* 中间区域：上联、福字、下联 - 传统顺序：右上左下 */}
         <div className="couplets-section">
-          {/* 上联 - 右侧 */}
+          {/* 上联 - 右侧（传统贴法） */}
           <div className="couplet-wrapper">
             <div className="couplet paper-texture upper-couplet">
               <span className="vertical-text couplet-text">{data.upperCouplet}</span>
@@ -41,14 +41,14 @@ export default function DisplayPage({ data, topic, onReset }: DisplayPageProps) 
           {/* 中间福字 */}
           <div className="fu-section">
             <div className="fu-paper paper-texture">
-              <span className="fu-character">福</span>
+              <span className="fu-character inverted">福</span>
             </div>
             <div className="fu-paper paper-texture">
               <span className="fu-character inverted">福</span>
             </div>
           </div>
 
-          {/* 下联 - 左侧 */}
+          {/* 下联 - 左侧（传统贴法） */}
           <div className="couplet-wrapper">
             <div className="couplet paper-texture lower-couplet">
               <span className="vertical-text couplet-text">{data.lowerCouplet}</span>
@@ -61,7 +61,7 @@ export default function DisplayPage({ data, topic, onReset }: DisplayPageProps) 
         <div className="spring-scrolls-section">
           {data.springScrolls.map((scroll, index) => (
             <div key={index} className="spring-scroll paper-texture">
-              <span className="spring-scroll-text">{scroll}</span>
+              <span className="spring-scroll-text vertical-text">{scroll}</span>
             </div>
           ))}
         </div>

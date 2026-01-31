@@ -50,20 +50,10 @@ body {
   color: var(--color-primary);
   text-shadow: 4px 4px 0 var(--color-gold);
   display: inline-block;
-  transform: rotate(0deg);
-  transition: transform 0.3s ease;
 }
 
 .fu-character.inverted {
   transform: rotate(180deg);
-}
-
-.fu-character:hover {
-  transform: scale(1.05) rotate(0deg);
-}
-
-.fu-character.inverted:hover {
-  transform: scale(1.05) rotate(180deg);
 }
 
 /* 装饰性边框 */
