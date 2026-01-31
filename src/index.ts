@@ -9,6 +9,7 @@ import openaiRoutes from "./routes/openai.routes";
 export interface Env {
   OPENAI_API_KEY?: string;
   OPENAI_BASE_URL?: string;
+  ASSETS?: string;
 }
 
 const app = new OpenAPIHono<{ Bindings: Env }>();
