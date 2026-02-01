@@ -1,19 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import SettingsButton from './components/SettingsButton';
+import type { Model, ModelsResponse } from './types/model.types';
 import './DesignInput.css';
-
-interface Model {
-  id: string;
-  object: string;
-  created: number;
-  owned_by: string;
-}
-
-interface ModelsResponse {
-  object: string;
-  data: Model[];
-}
 
 export default function DesignInput() {
   const navigate = useNavigate();

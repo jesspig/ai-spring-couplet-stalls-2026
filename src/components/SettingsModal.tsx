@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { Model } from '../types/model.types';
 
 /**
  * 设置弹窗组件属性
@@ -10,16 +11,6 @@ interface SettingsModalProps {
   onClose: () => void;
   /** 模型列表更新回调 */
   onModelsUpdate?: (models: Model[]) => void;
-}
-
-/**
- * 模型信息
- */
-interface Model {
-  id: string;
-  object: string;
-  created: number;
-  owned_by: string;
 }
 
 /**
