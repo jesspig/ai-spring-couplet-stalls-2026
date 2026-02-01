@@ -216,6 +216,43 @@
 }
 
 /* 响应式设计 */
+@media (max-width: 1024px) {
+  .display-container {
+    max-width: 100%;
+    padding: 0 16px;
+  }
+
+  .couplets-section {
+    gap: 32px;
+  }
+
+  .couplet {
+    min-height: 350px;
+    padding: 28px 16px;
+  }
+
+  .couplet-text {
+    font-size: 1.75rem;
+  }
+
+  .horizontal-text {
+    font-size: 2rem;
+  }
+
+  .fu-paper {
+    width: 100px;
+    height: 100px;
+  }
+
+  .fu-paper .fu-character {
+    font-size: 4rem;
+  }
+
+  .spring-scroll-text {
+    font-size: 1.2rem;
+  }
+}
+
 @media (max-width: 768px) {
   .display-page {
     padding: 20px 10px;
@@ -236,6 +273,10 @@
 
   .horizontal-text {
     font-size: 1.5rem;
+  }
+
+  .horizontal-scroll {
+    padding: 12px 40px;
   }
 
   .fu-paper {
@@ -260,37 +301,204 @@
   }
 }
 
+@media (max-width: 640px) {
+  .display-page {
+    padding: 16px 8px;
+  }
+
+  .display-container {
+    gap: 24px;
+  }
+
+  .horizontal-scroll {
+    padding: 10px 32px;
+    border-width: 3px;
+  }
+
+  .horizontal-text {
+    font-size: 1.3rem;
+    letter-spacing: 0.2em;
+  }
+
+  .couplets-section {
+    gap: 12px;
+    padding: 16px 0;
+  }
+
+  .couplet {
+    padding: 16px 10px;
+    min-height: 240px;
+    border-width: 3px;
+  }
+
+  .couplet-text {
+    font-size: 1.1rem;
+    line-height: 1.8;
+  }
+
+  .couplet-label {
+    font-size: 0.8rem;
+  }
+
+  .fu-section {
+    gap: 16px;
+    padding: 0 16px;
+  }
+
+  .fu-paper {
+    width: 70px;
+    height: 70px;
+    border-width: 3px;
+  }
+
+  .fu-paper .fu-character {
+    font-size: 2.5rem;
+  }
+
+  .spring-scrolls-section {
+    gap: 8px;
+  }
+
+  .spring-scroll {
+    padding: 6px 12px;
+    min-height: 100px;
+    border-width: 2px;
+  }
+
+  .spring-scroll-text {
+    font-size: 0.9rem;
+  }
+
+  .display-topic {
+    font-size: 0.9rem;
+    padding: 6px 16px;
+  }
+}
+
 @media (max-width: 480px) {
+  .display-page {
+    padding: 12px 6px;
+  }
+
+  .display-container {
+    gap: 20px;
+  }
+
+  .horizontal-scroll {
+    padding: 8px 24px;
+    border-width: 2px;
+  }
+
+  .horizontal-text {
+    font-size: 1.1rem;
+    letter-spacing: 0.15em;
+  }
+
   .couplets-section {
     flex-direction: column;
     align-items: center;
+    gap: 20px;
   }
 
   .couplet {
     min-height: auto;
-    padding: 16px;
+    padding: 14px;
+    border-width: 2px;
+    width: 100%;
+    max-width: 300px;
   }
 
   .couplet-text {
     writing-mode: horizontal-tb;
     letter-spacing: 0.2em;
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+
+  .couplet-label {
+    font-size: 0.75rem;
   }
 
   .fu-section {
     flex-direction: row;
-    gap: 16px;
+    gap: 12px;
   }
 
   .fu-paper {
-    width: 80px;
-    height: 80px;
+    width: 60px;
+    height: 60px;
+    border-width: 2px;
   }
 
   .fu-paper .fu-character {
-    font-size: 3rem;
+    font-size: 2rem;
   }
 
   .fu-paper .fu-character.inverted {
     transform: rotate(135deg);
+  }
+
+  .spring-scrolls-section {
+    gap: 6px;
+  }
+
+  .spring-scroll {
+    padding: 4px 10px;
+    min-height: 80px;
+    border-width: 2px;
+  }
+
+  .spring-scroll-text {
+    font-size: 0.8rem;
+    letter-spacing: 0.2em;
+  }
+
+  .display-footer {
+    margin-top: 16px;
+  }
+
+  .display-topic {
+    font-size: 0.85rem;
+    padding: 4px 12px;
+  }
+}
+
+@media (max-width: 375px) {
+  .display-page {
+    padding: 10px 4px;
+  }
+
+  .horizontal-scroll {
+    padding: 6px 20px;
+  }
+
+  .horizontal-text {
+    font-size: 1rem;
+  }
+
+  .couplet {
+    padding: 12px;
+    max-width: 280px;
+  }
+
+  .couplet-text {
+    font-size: 0.9rem;
+  }
+
+  .fu-paper {
+    width: 50px;
+    height: 50px;
+  }
+
+  .fu-paper .fu-character {
+    font-size: 1.5rem;
+  }
+
+  .spring-scroll {
+    min-height: 70px;
+  }
+
+  .spring-scroll-text {
+    font-size: 0.75rem;
   }
 }
