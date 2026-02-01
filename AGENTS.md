@@ -14,7 +14,7 @@
 - **多模型支持**：支持 OpenAI 及其他兼容的 API 服务
 - **灵活配置**：支持字数（5/7/9字）、对联顺序、横批方向、福字方向等配置
 - **自动审查**：内置质量审查机制，最多重试 3 次
-- **精美展示**：传统风格的春联展示界面
+- **精美展示**：传统风格的春联展示界面，支持实时布局调整
 - **详细日志**：控制台输出完整的生成过程日志
 
 ### 核心技术栈
@@ -54,7 +54,7 @@ trae_demo_04/
 │   │   ├── SettingsModal.tsx     # 设置弹窗组件
 │   │   └── Settings.css          # 设置样式
 │   ├── pages/                    # 页面组件
-│   │   ├── DisplayPage.tsx       # 春联展示页面
+│   │   ├── DisplayPage.tsx       # 春联展示页面（含实时控制面板）
 │   │   ├── DisplayPage.css       # 展示页面样式
 │   │   ├── LoadingPage.tsx       # 加载页面（执行工作流）
 │   │   └── LoadingPage.css       # 加载页面样式
@@ -70,6 +70,7 @@ trae_demo_04/
 │   ├── routes.tsx                # 路由配置
 │   └── style.css                 # 全局样式
 ├── public/
+│   ├── 404.html                  # GitHub Pages SPA 路由支持
 │   └── vite.svg                  # Vite 图标
 ├── design-system/                # 设计系统
 │   └── ai-码年挥春小摊/
@@ -77,7 +78,7 @@ trae_demo_04/
 ├── index.html                    # HTML 模板
 ├── package.json                  # 项目配置
 ├── tsconfig.json                 # TypeScript 配置
-├── vite.config.ts                # Vite 配置
+├── vite.config.ts                # Vite 配置（支持双环境）
 ├── .editorconfig                 # 编辑器统一配置
 └── README.md                     # 项目说明
 ```
@@ -112,6 +113,14 @@ yarn build
 yarn preview
 ```
 
+### 预览 GitHub Pages 部署效果
+
+```bash
+yarn dev:gh
+```
+
+此命令会构建项目并使用正确的仓库名路径预览，用于本地验证 GitHub Pages 部署效果。
+
 ## 使用指南
 
 ### 通过 Web 界面
@@ -126,6 +135,17 @@ yarn preview
 8. 选择福字方向（正贴、倒贴）
 9. 选择模型
 10. 点击"开始设计"
+
+### 展示页面实时调整
+
+春联生成后，在展示页面可以通过左侧控制面板实时调整：
+
+- **对联顺序**：切换左上右下 / 右上左下布局
+- **横批方向**：切换左到右 / 右到左显示
+- **福字方向**：切换正贴 / 倒贴显示
+- 点击"再写一副"返回重新设计
+
+移动端控制面板自动调整为顶部横向布局。
 
 ### 控制台日志
 
@@ -301,24 +321,35 @@ yarn preview
 
 ## 部署到 GitHub Pages
 
-### 1. 配置 vite.config.ts
+项目已配置支持 GitHub Pages 部署，采用双环境配置策略：
 
-```typescript
-export default defineConfig({
-  base: '/your-repo-name/',
-  // ...
-})
-```
+### 环境配置
 
-### 2. 构建项目
+`vite.config.ts` 已配置动态 `base` 路径：
+- 开发环境：使用根路径 `/`
+- 生产环境：使用仓库名路径 `/ai-spring-couplet-stalls-2026/`
+
+### 部署步骤
+
+1. **构建项目**
 
 ```bash
 yarn build
 ```
 
-### 3. 部署
+2. **本地预览部署效果**
+
+```bash
+yarn dev:gh
+```
+
+3. **部署到 GitHub Pages**
 
 将 `dist` 目录推送到 GitHub Pages，或使用 GitHub Actions 自动部署。
+
+### SPA 路由支持
+
+项目包含 `public/404.html` 用于 GitHub Pages 客户端路由支持，解决直接访问子路由时的 404 问题。
 
 ## 注意事项
 
@@ -329,3 +360,4 @@ yarn build
 - 建议使用具有良好中文能力的模型
 - 控制台日志包含完整的生成过程，便于调试
 - 设计系统变更需同步更新 `design-system/` 目录下的文档
+- GitHub Pages 部署需使用 `yarn dev:gh` 验证路径配置
