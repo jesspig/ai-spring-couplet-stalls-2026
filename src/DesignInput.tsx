@@ -20,30 +20,42 @@ export default function DesignInput() {
   const [horizontalDirection, setHorizontalDirection] = useState('rightToLeft');
   const [fuOrientation, setFuOrientation] = useState('upright');
 
-  // 从location.state恢复表单数据
+  // 从localStorage加载保存的布局配置
+  useEffect(() => {
+    const savedWordCount = localStorage.getItem('wordCount');
+    const savedCoupletOrder = localStorage.getItem('coupletOrder');
+    const savedHorizontalDirection = localStorage.getItem('horizontalDirection');
+    const savedFuOrientation = localStorage.getItem('fuOrientation');
+
+    if (savedWordCount) setWordCount(savedWordCount);
+    if (savedCoupletOrder) setCoupletOrder(savedCoupletOrder);
+    if (savedHorizontalDirection) setHorizontalDirection(savedHorizontalDirection);
+    if (savedFuOrientation) setFuOrientation(savedFuOrientation);
+  }, []);
+
+  // 保存布局配置到localStorage
+  useEffect(() => {
+    localStorage.setItem('wordCount', wordCount);
+  }, [wordCount]);
+
+  useEffect(() => {
+    localStorage.setItem('coupletOrder', coupletOrder);
+  }, [coupletOrder]);
+
+  useEffect(() => {
+    localStorage.setItem('horizontalDirection', horizontalDirection);
+  }, [horizontalDirection]);
+
+  useEffect(() => {
+    localStorage.setItem('fuOrientation', fuOrientation);
+  }, [fuOrientation]);
+
+  // 从location.state恢复表单数据（仅当从LoadingPage返回时）
   useEffect(() => {
     const state = location.state as { formData?: FormData; errorMessage?: string } | null;
     if (state?.formData) {
       setTopic(state.formData.topic);
-      setWordCount(state.formData.wordCount);
-      // 转换coupletOrder格式
-      const orderMap: Record<string, string> = {
-        'upper-lower': 'leftUpper',
-        'lower-upper': 'rightUpper'
-      };
-      setCoupletOrder(orderMap[state.formData.coupletOrder] || 'rightUpper');
-      // 转换horizontalDirection格式
-      const directionMap: Record<string, string> = {
-        'left-right': 'leftToRight',
-        'right-left': 'rightToLeft'
-      };
-      setHorizontalDirection(directionMap[state.formData.horizontalDirection] || 'rightToLeft');
-      // 转换fuDirection格式
-      const fuMap: Record<string, string> = {
-        'upright': 'upright',
-        'rotated': 'inverted'
-      };
-      setFuOrientation(fuMap[state.formData.fuDirection] || 'upright');
+      // 注意：不从formData恢复布局配置，保持用户之前的设置
     }
     if (state?.errorMessage) {
       setReturnError(state.errorMessage);
