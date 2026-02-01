@@ -4,12 +4,15 @@ import {
   SPRING_GENERATION_SYSTEM_PROMPT,
   buildGenerationPrompt,
   REVIEW_SYSTEM_PROMPT,
-  buildReviewPrompt,
-  type TopicAnalysisResult,
-  type SpringFestivalResponse,
-  type WorkflowResponse,
-  type ReviewResult
-} from "../config/prompts.config";
+  buildReviewPrompt
+} from "../config/prompts";
+import { parseLLMJson } from "../utils/json-parser.util";
+import type {
+  TopicAnalysisResult,
+  SpringFestivalResponse,
+  WorkflowResponse,
+  ReviewResult
+} from "../types/spring.types";
 
 /**
  * LLM调用配置
@@ -57,11 +60,9 @@ export class SpringWorkflowService {
 
       console.log(`\n=== 尝试 ${attempt}/${maxAttempts} ===`);
 
-      // 阶段1：主题分析
       const analysis = await this.analyzeTopic(topic, wordCount);
       console.log('✓ 主题分析完成');
 
-      // 阶段2：春联生成
       const springFestival = await this.generateSpringFestival(
         topic,
         wordCount,
@@ -72,7 +73,6 @@ export class SpringWorkflowService {
       console.log(`  上联：${springFestival.upperCouplet}`);
       console.log(`  下联：${springFestival.lowerCouplet}`);
 
-      // 阶段3：审查
       const review = await this.reviewSpringFestival(topic, wordCount, springFestival);
       console.log('✓ 质量审查完成');
 
@@ -93,7 +93,6 @@ export class SpringWorkflowService {
       console.log('✗ 审查未通过');
       console.log('  错误信息：', review.errors.map(e => e.message));
 
-      // 记录错误信息用于下次生成
       lastErrors = review.errors.map(e => e.message);
     }
 
@@ -110,7 +109,7 @@ export class SpringWorkflowService {
     const userPrompt = buildTopicAnalysisPrompt(topic, wordCount);
     const content = await this.callLLM(TOPIC_ANALYSIS_SYSTEM_PROMPT, userPrompt, 0.7);
 
-    return this.parseAnalysisResult(content);
+    return parseLLMJson<TopicAnalysisResult>(content);
   }
 
   /**
@@ -130,7 +129,14 @@ export class SpringWorkflowService {
     const userPrompt = buildGenerationPrompt(topic, wordCount, analysis, previousErrors);
     const content = await this.callLLM(SPRING_GENERATION_SYSTEM_PROMPT, userPrompt, 0.8);
 
-    return this.parseSpringResult(content);
+    const result = parseLLMJson<SpringFestivalResponse>(content);
+
+    if (!result.upperCouplet || !result.lowerCouplet ||
+        !result.horizontalScroll || !Array.isArray(result.springScrolls)) {
+      throw new Error("LLM返回的数据结构不完整");
+    }
+
+    return result;
   }
 
   /**
@@ -148,7 +154,13 @@ export class SpringWorkflowService {
     const userPrompt = buildReviewPrompt(topic, wordCount, result);
     const content = await this.callLLM(REVIEW_SYSTEM_PROMPT, userPrompt, 0.3);
 
-    return this.parseReviewResult(content);
+    const reviewResult = parseLLMJson<ReviewResult>(content);
+
+    if (typeof reviewResult.passed !== "boolean") {
+      throw new Error("审查结果缺少passed字段");
+    }
+
+    return reviewResult;
   }
 
   /**
@@ -199,101 +211,5 @@ export class SpringWorkflowService {
     }
 
     return content;
-  }
-
-  /**
-   * 解析主题分析结果
-   * @param content LLM返回的文本
-   * @returns 解析后的分析结果
-   */
-  private parseAnalysisResult(content: string): TopicAnalysisResult {
-    try {
-      // 尝试直接解析
-      return JSON.parse(content) as TopicAnalysisResult;
-    } catch {
-      // 尝试从markdown代码块中提取
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
-                        content.match(/```\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[1].trim()) as TopicAnalysisResult;
-      }
-
-      // 尝试提取花括号内的内容
-      const braceMatch = content.match(/\{[\s\S]*\}/);
-      if (braceMatch) {
-        return JSON.parse(braceMatch[0]) as TopicAnalysisResult;
-      }
-
-      throw new Error("无法解析主题分析结果");
-    }
-  }
-
-  /**
-   * 解析春联生成结果
-   * @param content LLM返回的文本
-   * @returns 解析后的春联结果
-   */
-  private parseSpringResult(content: string): SpringFestivalResponse {
-    let result: SpringFestivalResponse;
-
-    try {
-      // 尝试直接解析
-      result = JSON.parse(content) as SpringFestivalResponse;
-    } catch {
-      // 尝试从markdown代码块中提取
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
-                        content.match(/```\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[1].trim()) as SpringFestivalResponse;
-      } else {
-        // 尝试提取花括号内的内容
-        const braceMatch = content.match(/\{[\s\S]*\}/);
-        if (braceMatch) {
-          result = JSON.parse(braceMatch[0]) as SpringFestivalResponse;
-        } else {
-          throw new Error("无法解析LLM返回的JSON");
-        }
-      }
-    }
-
-    // 验证响应结构
-    if (!result.upperCouplet || !result.lowerCouplet ||
-        !result.horizontalScroll || !Array.isArray(result.springScrolls)) {
-      throw new Error("LLM返回的数据结构不完整");
-    }
-
-    return result;
-  }
-
-  /**
-   * 解析审查结果
-   * @param content LLM返回的文本
-   * @returns 解析后的审查结果
-   */
-  private parseReviewResult(content: string): ReviewResult {
-    let result: ReviewResult;
-
-    try {
-      result = JSON.parse(content) as ReviewResult;
-    } catch {
-      const jsonMatch = content.match(/```json\s*([\s\S]*?)```/) ||
-                        content.match(/```\s*([\s\S]*?)```/);
-      if (jsonMatch) {
-        result = JSON.parse(jsonMatch[1].trim()) as ReviewResult;
-      } else {
-        const braceMatch = content.match(/\{[\s\S]*\}/);
-        if (braceMatch) {
-          result = JSON.parse(braceMatch[0]) as ReviewResult;
-        } else {
-          throw new Error("无法解析审查结果");
-        }
-      }
-    }
-
-    if (typeof result.passed !== "boolean") {
-      throw new Error("审查结果缺少passed字段");
-    }
-
-    return result;
   }
 }
