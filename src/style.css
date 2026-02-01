@@ -128,8 +128,65 @@ body {
 }
 
 /* 响应式字体大小 */
+@media (max-width: 1440px) {
+  .fu-character {
+    font-size: 7rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  .fu-character {
+    font-size: 6rem;
+  }
+}
+
 @media (max-width: 768px) {
   .fu-character {
     font-size: 5rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .fu-character {
+    font-size: 4rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .fu-character {
+    font-size: 3rem;
+  }
+}
+
+@media (max-width: 375px) {
+  .fu-character {
+    font-size: 2.5rem;
+  }
+}
+
+/* 响应式按钮 */
+@media (max-width: 640px) {
+  .btn-primary {
+    padding: 10px 24px;
+    font-size: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .btn-primary {
+    padding: 10px 20px;
+    font-size: 14px;
+    width: 100%;
+  }
+}
+
+/* 防止横向滚动 */
+@media (max-width: 480px) {
+  body {
+    overflow-x: hidden;
+  }
+  
+  * {
+    max-width: 100%;
   }
 }
