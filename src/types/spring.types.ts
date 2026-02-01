@@ -84,6 +84,81 @@ export interface FormData {
 }
 
 /**
+ * 工作流步骤状态
+ */
+export type StepStatus = 'pending' | 'running' | 'completed' | 'failed';
+
+/**
+ * 工作流步骤定义
+ */
+export interface WorkflowStep {
+  /** 步骤唯一标识 */
+  id: string;
+  /** 步骤名称 */
+  name: string;
+  /** 步骤描述 */
+  description: string;
+  /** 当前状态 */
+  status: StepStatus;
+  /** 模型输出内容（进行中或已完成时） */
+  output?: string;
+  /** 开始时间 */
+  startTime?: number;
+  /** 完成时间 */
+  endTime?: number;
+  /** 错误信息 */
+  error?: string;
+}
+
+/**
+ * 进度事件类型
+ */
+export type ProgressEventType = 
+  | 'analysis_start' 
+  | 'analysis_complete'
+  | 'upper_couplet_start'
+  | 'upper_couplet_complete'
+  | 'upper_couplet_failed'
+  | 'lower_couplet_start'
+  | 'lower_couplet_complete'
+  | 'lower_couplet_failed'
+  | 'spring_scrolls_start'
+  | 'spring_scrolls_complete'
+  | 'spring_scrolls_failed'
+  | 'horizontal_scroll_start'
+  | 'horizontal_scroll_complete'
+  | 'workflow_complete'
+  | 'workflow_failed'
+  | 'workflow_aborted';
+
+/**
+ * 进度事件
+ */
+export interface ProgressEvent {
+  /** 事件类型 */
+  type: ProgressEventType;
+  /** 事件时间戳 */
+  timestamp: number;
+  /** 步骤名称 */
+  stepName: string;
+  /** 步骤描述 */
+  stepDescription: string;
+  /** 输出内容 */
+  output?: string;
+  /** 错误信息 */
+  error?: string;
+  /** 是否是重试步骤 */
+  isRetry?: boolean;
+  /** 重试次数 */
+  retryCount?: number;
+}
+
+/**
+ * 进度回调函数类型
+ */
+export type ProgressCallback = (event: ProgressEvent) => void;
+
+/**
  * 完整工作流响应结构
  */
 export interface WorkflowResponse extends SpringFestivalResponse {
@@ -95,4 +170,6 @@ export interface WorkflowResponse extends SpringFestivalResponse {
   formData?: FormData;
   /** 回退时的错误信息 */
   errorMessage?: string;
+  /** 是否被中止 */
+  aborted?: boolean;
 }
