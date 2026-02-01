@@ -58,7 +58,7 @@ export default function DisplayPage() {
         <div
           className="couplets-section"
           style={{
-            flexDirection: coupletOrder === 'leftUpper' ? 'row-reverse' : 'row'
+            flexDirection: coupletOrder === 'leftUpper' ? 'row' : 'row-reverse'
           }}
         >
           <div className="couplet-wrapper">
