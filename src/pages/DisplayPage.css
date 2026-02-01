@@ -121,6 +121,34 @@
   gap: 32px;
 }
 
+/* SVG预览区域 */
+.svg-preview-section {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* HTML预览区域 */
+.html-preview-section {
+  width: 100%;
+  padding: 24px;
+  background: var(--color-paper);
+  border: 2px solid var(--color-gold-light);
+  border-radius: 12px;
+  margin-top: 20px;
+}
+
+.preview-section-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--color-text);
+  margin: 0 0 16px 0;
+  text-align: center;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--color-gold-light);
+}
+
 /* 横批区域 */
 .horizontal-scroll-section {
   width: 100%;
