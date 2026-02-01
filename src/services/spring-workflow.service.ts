@@ -1,26 +1,23 @@
 import {
   TOPIC_ANALYSIS_SYSTEM_PROMPT,
   buildTopicAnalysisPrompt,
-  SPRING_GENERATION_SYSTEM_PROMPT,
-  buildGenerationPrompt,
-  REVIEW_SYSTEM_PROMPT,
-  buildReviewPrompt,
+  UPPER_COUPLET_SYSTEM_PROMPT,
+  buildUpperCoupletPrompt,
+  LOWER_COUPLET_SYSTEM_PROMPT,
+  buildLowerCoupletPrompt,
+  SPRING_SCROLLS_SYSTEM_PROMPT,
+  buildSpringScrollsPrompt,
   ELECTION_SYSTEM_PROMPT,
-  buildElectionPrompt,
-  type GenerationHistory,
-  type ReviewHistory
+  buildElectionPrompt
 } from "../config/prompts";
 import { parseLLMJson } from "../utils/json-parser.util";
 import type {
   TopicAnalysisResult,
   SpringFestivalResponse,
   WorkflowResponse,
-  ReviewResult
+  GenerationHistory
 } from "../types/spring.types";
 
-/**
- * LLM调用配置
- */
 interface LLMConfig {
   baseUrl: string;
   apiKey: string;
@@ -28,90 +25,58 @@ interface LLMConfig {
 }
 
 /**
- * 错误分类类型
+ * 验证字数
  */
-type ErrorCategory = "format" | "pingze" | "duizhang" | "content" | "other";
-
-/**
- * 分类错误信息
- * @param errorMessage 错误消息
- * @returns 错误分类
- */
-function categorizeError(errorMessage: string): ErrorCategory {
-  const message = errorMessage.toLowerCase();
-  if (message.includes("字数") || message.includes("格式") || message.includes("json")) {
-    return "format";
+function validateWordCount(text: string, expected: number): string | null {
+  if (text.length !== expected) {
+    return `字数错误：要求${expected}字，实际${text.length}字"${text}"`;
   }
-  if (message.includes("平仄") || message.includes("声") || message.includes("音")) {
-    return "pingze";
-  }
-  if (message.includes("对仗") || message.includes("词性") || message.includes("结构")) {
-    return "duizhang";
-  }
-  if (message.includes("错别") || message.includes("语法") || message.includes("用词")) {
-    return "content";
-  }
-  return "other";
-}
-
-/**
- * 验证春联字数是否符合要求
- * @param result 春联生成结果
- * @param expectedWordCount 期望的字数
- * @returns 验证结果，通过返回null，不通过返回错误信息
- */
-function validateWordCount(
-  result: SpringFestivalResponse,
-  expectedWordCount: string
-): string | null {
-  const expected = parseInt(expectedWordCount, 10);
-
-  if (isNaN(expected)) {
-    return `字数要求格式错误：${expectedWordCount}`;
-  }
-
-  const upperLength = result.upperCouplet.length;
-  const lowerLength = result.lowerCouplet.length;
-
-  if (upperLength !== expected) {
-    return `上联字数错误：要求${expected}字，实际${upperLength}字"${result.upperCouplet}"`;
-  }
-
-  if (lowerLength !== expected) {
-    return `下联字数错误：要求${expected}字，实际${lowerLength}字"${result.lowerCouplet}"`;
-  }
-
-  if (upperLength !== lowerLength) {
-    return `上下联字数不相等：上联${upperLength}字，下联${lowerLength}字`;
-  }
-
   return null;
 }
 
 /**
- * 春联生成工作流服务
- * 实现三阶段工作流：主题分析 → 春联生成 → 质量审查
+ * 验证声调
  */
+function validateTone(text: string, isUpper: boolean): string | null {
+  const lastChar = text.slice(-1);
+  const tone = getTone(lastChar);
+  
+  if (isUpper) {
+    if (tone === 1 || tone === 2) {
+      return `上联末字"${lastChar}"为平声（${tone}声），应为仄声（3/4声）`;
+    }
+  } else {
+    if (tone === 3 || tone === 4) {
+      return `下联末字"${lastChar}"为仄声（${tone}声），应为平声（1/2声）`;
+    }
+  }
+  return null;
+}
+
+/**
+ * 获取汉字声调
+ */
+function getTone(char: string): number {
+  const pinyinMap: Record<string, number> = {
+    '天': 1, '春': 1, '风': 1, '花': 1, '开': 1, '家': 1, '福': 1, '祥': 1, '龙': 2, '鹏': 2, '程': 2, '图': 2, '金': 1, '银': 2, '年': 2, '人': 2,
+    '水': 3, '火': 3, '土': 3, '雨': 3, '雪': 3, '海': 3, '鸟': 3, '马': 3, '草': 3, '手': 3, '走': 3, '友': 3, '有': 3, '酒': 3, '久': 3,
+    '日': 4, '月': 4, '木': 4, '石': 4, '玉': 4, '路': 4, '树': 4, '去': 4, '住': 4, '处': 4, '事': 4, '世': 4, '业': 4, '意': 4
+  };
+  
+  return pinyinMap[char] || 1;
+}
+
 export class SpringWorkflowService {
   private config: LLMConfig;
 
   constructor(baseUrl: string, apiKey: string, model: string) {
-    const trimmedUrl = baseUrl.replace(/\/$/, "");
     this.config = {
-      baseUrl: trimmedUrl,
+      baseUrl: baseUrl.replace(/\/$/, ""),
       apiKey,
       model
     };
   }
 
-  /**
-   * 执行完整的三阶段工作流
-   * @param topic 用户输入的主题
-   * @param wordCount 春联字数（5、7、9）
-   * @param includeAnalysis 是否在响应中包含分析结果
-   * @param formData 表单信息（用于回退时恢复）
-   * @returns 春联生成结果
-   */
   async executeWorkflow(
     topic: string,
     wordCount: string,
@@ -119,327 +84,175 @@ export class SpringWorkflowService {
     formData?: { coupletOrder: 'upper-lower' | 'lower-upper'; horizontalDirection: 'left-right' | 'right-left'; fuDirection: 'upright' | 'rotated' }
   ): Promise<WorkflowResponse> {
     const maxAttempts = 5;
-    let attempt = 0;
-    const generationHistory: GenerationHistory[] = [];
-    const reviewHistory: ReviewHistory[] = [];
+    const history: GenerationHistory[] = [];
+    const expectedCount = parseInt(wordCount, 10);
 
     console.log(`\n=== 开始春联生成工作流 ===`);
-    console.log(`主题：${topic}`);
-    console.log(`字数：${wordCount}字`);
+    console.log(`主题：${topic}，字数：${wordCount}`);
 
-    while (attempt < maxAttempts) {
-      attempt++;
+    const analysis = await this.analyzeTopic(topic, wordCount);
+    console.log("✓ 主题分析完成");
 
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
       console.log(`\n=== 尝试 ${attempt}/${maxAttempts} ===`);
 
       try {
-        const analysis = await this.analyzeTopic(topic, wordCount);
-        console.log("✓ 主题分析完成");
-
-        const springFestival = await this.generateSpringFestival(
-          topic,
-          wordCount,
-          analysis,
-          generationHistory
-        );
-        console.log("✓ 春联生成完成");
-        console.log(`  上联：${springFestival.upperCouplet}`);
-        console.log(`  下联：${springFestival.lowerCouplet}`);
-
-        const wordCountError = validateWordCount(springFestival, wordCount);
-        if (wordCountError) {
-          console.log("✗ 程序字数验证未通过");
-          console.log(`  错误：${wordCountError}`);
-
-          const errorCategories = ["format"];
-          const reviewResult = {
-            passed: false,
-            errors: [{ type: "字数错误", message: wordCountError }],
-            suggestions: ["必须严格按照要求的字数生成，上联和下联字数必须相等"]
-          };
-
-          generationHistory.push({
-            attempt,
-            ...springFestival,
-            reviewResult,
-            errorCategories
-          });
-          reviewHistory.push({
-            attempt,
-            ...springFestival,
-            reviewResult,
-            errorCategories
-          });
-
+        const upperCouplet = await this.generateUpperCouplet(topic, wordCount, analysis);
+        const upperWordError = validateWordCount(upperCouplet, expectedCount);
+        if (upperWordError) {
+          console.log(`✗ 上联${upperWordError}`);
           continue;
         }
 
-        console.log("✓ 程序字数验证通过");
-
-        const review = await this.reviewSpringFestival(
-          topic,
-          wordCount,
-          springFestival,
-          reviewHistory
-        );
-        console.log("✓ 质量审查完成");
-
-        const errorCategories = review.errors.map(e => categorizeError(e.message));
-
-        generationHistory.push({
-          attempt,
-          ...springFestival,
-          reviewResult: review,
-          errorCategories
-        });
-        reviewHistory.push({
-          attempt,
-          ...springFestival,
-          reviewResult: review,
-          errorCategories
-        });
-
-        if (review.passed) {
-          console.log("✓ 审查通过！");
-          console.log(`\n=== 春联生成成功（第${attempt}次尝试）===`);
-
-          const result: WorkflowResponse = {
-            ...springFestival
-          };
-
-          if (includeAnalysis) {
-            result.analysis = analysis;
-          }
-
-          return result;
+        const lowerCouplet = await this.generateLowerCouplet(topic, wordCount, upperCouplet, analysis);
+        const lowerWordError = validateWordCount(lowerCouplet, expectedCount);
+        if (lowerWordError) {
+          console.log(`✗ 下联${lowerWordError}`);
+          continue;
         }
 
-        console.log("✗ 审查未通过");
-        console.log("  错误分类：", errorCategories);
-        console.log("  错误详情：", review.errors.map(e => `[${e.type}] ${e.message}`));
+        history.push({
+          attempt,
+          upperCouplet,
+          lowerCouplet
+        });
 
-        if (review.suggestions.length > 0) {
-          console.log("  改进建议：", review.suggestions);
+        const springScrolls = await this.generateSpringScrolls(topic, upperCouplet, lowerCouplet, analysis);
+        
+        const scrollErrors = springScrolls.map(s => validateWordCount(s, 4)).filter(e => e);
+        if (scrollErrors.length > 0) {
+          console.log(`✗ 挥春字数错误：${scrollErrors.join('; ')}`);
+          continue;
         }
+
+        console.log("✓ 挥春生成完成");
+        
+        const result: WorkflowResponse = {
+          upperCouplet,
+          lowerCouplet,
+          horizontalScroll: this.generateHorizontalScroll(topic, analysis),
+          springScrolls
+        };
+
+        if (includeAnalysis) {
+          result.analysis = analysis;
+        }
+
+        return result;
 
       } catch (error) {
-        console.error(`✗ 第${attempt}次尝试发生错误:`, error);
-        if (attempt === maxAttempts) {
-          throw error;
-        }
+        console.error(`✗ 第${attempt}次尝试失败:`, error);
       }
     }
 
-    console.log(`\n=== 春联生成失败 ===`);
-    console.log("历史记录：", JSON.stringify(generationHistory, null, 2));
-
-    const candidates = generationHistory.filter(h => !h.reviewResult.passed);
-
-    if (candidates.length > 0) {
-      // 检查是否有单数字数的候选（5/7/9字）
-      const singleDigitCandidates = candidates.filter(h => {
-        const upperLength = h.upperCouplet.length;
-        return upperLength === 5 || upperLength === 7 || upperLength === 9;
-      });
-
-      console.log(`\n=== 触发选举机制 ===`);
-      console.log(`候选数量：${candidates.length}个`);
-      console.log(`单数字数候选：${singleDigitCandidates.length}个`);
-
-      // 如果没有单数字数的候选，回退到首页
-      if (singleDigitCandidates.length === 0) {
-        console.log("✗ 没有单数字数的候选，回退到首页");
-
-        const result: WorkflowResponse = {
-          upperCouplet: '',
-          lowerCouplet: '',
-          horizontalScroll: '',
-          springScrolls: [],
-          shouldReturnToHome: true,
-          formData: {
-            topic,
-            wordCount,
-            coupletOrder: formData?.coupletOrder || 'upper-lower',
-            horizontalDirection: formData?.horizontalDirection || 'left-right',
-            fuDirection: formData?.fuDirection || 'upright'
-          },
-          errorMessage: '未能生成符合要求的单数字数对联（5/7/9字），请调整主题或字数后重试。'
-        };
-
-        return result;
-      }
-
-      // 优先从单数字数候选中选举
-      const electionCandidates = singleDigitCandidates.length > 0 ? singleDigitCandidates : candidates;
-      const electionResult = await this.electBestCandidate(electionCandidates, wordCount);
-
-      console.log("✓ 选举完成");
-      console.log(`  选中索引：${electionResult.selectedIndex}`);
-      console.log(`  选择理由：${electionResult.reason}`);
-
-      const selectedCandidate = electionCandidates[electionResult.selectedIndex];
+    if (history.length > 0) {
+      console.log("\n=== 触发选举机制 ===");
+      const best = await this.electBestCandidate(history, wordCount);
+      const springScrolls = await this.generateSpringScrolls(topic, best.upperCouplet, best.lowerCouplet, analysis);
 
       const result: WorkflowResponse = {
-        ...selectedCandidate
+        upperCouplet: best.upperCouplet,
+        lowerCouplet: best.lowerCouplet,
+        horizontalScroll: this.generateHorizontalScroll(topic, analysis),
+        springScrolls
       };
 
       if (includeAnalysis) {
-        result.analysis = await this.analyzeTopic(topic, wordCount);
+        result.analysis = analysis;
       }
 
       return result;
     }
 
-    throw new Error(`春联生成失败：经过${maxAttempts}次尝试仍未通过审查。主要问题：${this.summarizeHistoryErrors(generationHistory)}`);
-  }
-
-  /**
-   * 汇总历史错误
-   * @param generationHistory 生成历史记录
-   * @returns 错误摘要
-   */
-  private summarizeHistoryErrors(generationHistory: GenerationHistory[]): string {
-    const categoryCount: Record<ErrorCategory, number> = {
-      format: 0,
-      pingze: 0,
-      duizhang: 0,
-      content: 0,
-      other: 0
+    const result: WorkflowResponse = {
+      upperCouplet: '',
+      lowerCouplet: '',
+      horizontalScroll: '',
+      springScrolls: [],
+      shouldReturnToHome: true,
+      formData: {
+        topic,
+        wordCount,
+        coupletOrder: formData?.coupletOrder || 'upper-lower',
+        horizontalDirection: formData?.horizontalDirection || 'left-right',
+        fuDirection: formData?.fuDirection || 'upright'
+      },
+      errorMessage: '未能生成符合要求的春联，请调整主题后重试。'
     };
-
-    generationHistory.forEach(h => {
-      h.errorCategories.forEach(c => {
-        categoryCount[c]++;
-      });
-    });
-
-    const mainIssues = Object.entries(categoryCount)
-      .filter(([, count]) => count > 0)
-      .sort(([, a], [, b]) => b - a)
-      .map(([cat]) => {
-        const map: Record<ErrorCategory, string> = {
-          format: "格式错误",
-          pingze: "平仄不合规",
-          duizhang: "对仗不工整",
-          content: "内容问题",
-          other: "其他问题"
-        };
-        return map[cat];
-      });
-
-    return mainIssues.join("、") || "未知错误";
-  }
-
-  /**
-   * 选举最优候选春联
-   * @param candidates 候选春联列表
-   * @param wordCount 要求的字数
-   * @returns 选举结果
-   */
-  private async electBestCandidate(
-    candidates: Array<{
-      upperCouplet: string;
-      lowerCouplet: string;
-      horizontalScroll: string;
-      springScrolls: string[];
-    }>,
-    wordCount: string
-  ): Promise<{ selectedIndex: number; reason: string }> {
-    const userPrompt = buildElectionPrompt(candidates, wordCount);
-    const content = await this.callLLM(ELECTION_SYSTEM_PROMPT, userPrompt, 0.3);
-
-    const electionResult = JSON.parse(content) as { selectedIndex: number; reason: string };
-
-    if (typeof electionResult.selectedIndex !== "number") {
-      throw new Error("选举结果缺少selectedIndex字段");
-    }
-
-    if (electionResult.selectedIndex < 0 || electionResult.selectedIndex >= candidates.length) {
-      throw new Error(`选举索引超出范围：${electionResult.selectedIndex}`);
-    }
-
-    return electionResult;
-  }
-
-  /**
-   * 阶段1：分析主题并生成结构化提示词
-   * @param topic 用户输入的主题
-   * @param wordCount 春联字数
-   * @returns 主题分析结果
-   */
-  async analyzeTopic(topic: string, wordCount: string): Promise<TopicAnalysisResult> {
-    const userPrompt = buildTopicAnalysisPrompt(topic, wordCount);
-    const content = await this.callLLM(TOPIC_ANALYSIS_SYSTEM_PROMPT, userPrompt, 0.7);
-
-    return parseLLMJson<TopicAnalysisResult>(content);
-  }
-
-  /**
-   * 阶段2：基于分析结果生成春联
-   * @param topic 原始主题
-   * @param wordCount 春联字数
-   * @param analysis 主题分析结果
-   * @param previousErrors 之前的错误信息（用于改进）
-   * @returns 春联生成结果
-   */
-  async generateSpringFestival(
-    topic: string,
-    wordCount: string,
-    analysis: TopicAnalysisResult,
-    previousErrors?: string[]
-  ): Promise<SpringFestivalResponse> {
-    const userPrompt = buildGenerationPrompt(topic, wordCount, analysis, previousErrors);
-    const content = await this.callLLM(SPRING_GENERATION_SYSTEM_PROMPT, userPrompt, 0.8);
-
-    const result = parseLLMJson<SpringFestivalResponse>(content);
-
-    if (!result.upperCouplet || !result.lowerCouplet ||
-        !result.horizontalScroll || !Array.isArray(result.springScrolls)) {
-      throw new Error("LLM返回的数据结构不完整");
-    }
 
     return result;
   }
 
-  /**
-   * 阶段3：审查春联质量
-   * @param topic 原始主题
-   * @param wordCount 春联字数
-   * @param result 春联生成结果
-   * @returns 审查结果
-   */
-  async reviewSpringFestival(
-    topic: string,
-    wordCount: string,
-    result: SpringFestivalResponse
-  ): Promise<ReviewResult> {
-    const userPrompt = buildReviewPrompt(topic, wordCount, result);
-    const content = await this.callLLM(REVIEW_SYSTEM_PROMPT, userPrompt, 0.3);
-
-    const reviewResult = parseLLMJson<ReviewResult>(content);
-
-    if (typeof reviewResult.passed !== "boolean") {
-      throw new Error("审查结果缺少passed字段");
-    }
-
-    return reviewResult;
+  private async analyzeTopic(topic: string, wordCount: string): Promise<TopicAnalysisResult> {
+    const userPrompt = buildTopicAnalysisPrompt(topic, wordCount);
+    const content = await this.callLLM(TOPIC_ANALYSIS_SYSTEM_PROMPT, userPrompt, 0.7);
+    return content.trim();
   }
 
-  /**
-   * 调用LLM API
-   * @param systemPrompt 系统提示词
-   * @param userPrompt 用户提示词
-   * @param temperature 温度参数
-   * @returns LLM返回的文本内容
-   */
+  private async generateUpperCouplet(
+    topic: string,
+    wordCount: string,
+    analysis: TopicAnalysisResult
+  ): Promise<string> {
+    const userPrompt = buildUpperCoupletPrompt(topic, wordCount, analysis);
+    const content = await this.callLLM(UPPER_COUPLET_SYSTEM_PROMPT, userPrompt, 0.8);
+    const result = parseLLMJson<{ upperCouplet: string }>(content);
+    return result.upperCouplet;
+  }
+
+  private async generateLowerCouplet(
+    topic: string,
+    wordCount: string,
+    upperCouplet: string,
+    analysis: TopicAnalysisResult
+  ): Promise<string> {
+    const userPrompt = buildLowerCoupletPrompt(topic, wordCount, upperCouplet, analysis);
+    const content = await this.callLLM(LOWER_COUPLET_SYSTEM_PROMPT, userPrompt, 0.8);
+    const result = parseLLMJson<{ lowerCouplet: string }>(content);
+    return result.lowerCouplet;
+  }
+
+  private async generateSpringScrolls(
+    topic: string,
+    upperCouplet: string,
+    lowerCouplet: string,
+    analysis: TopicAnalysisResult
+  ): Promise<string[]> {
+    const userPrompt = buildSpringScrollsPrompt(topic, upperCouplet, lowerCouplet, analysis);
+    const content = await this.callLLM(SPRING_SCROLLS_SYSTEM_PROMPT, userPrompt, 0.8);
+    const result = parseLLMJson<{ springScrolls: string[] }>(content);
+    return result.springScrolls;
+  }
+
+  private generateHorizontalScroll(topic: string, analysis: TopicAnalysisResult): string {
+    const commonScrolls = ['万事如意', '前程似锦', '阖家欢乐', '马到成功', '春满人间'];
+    return commonScrolls[Math.floor(Math.random() * commonScrolls.length)];
+  }
+
+  private async electBestCandidate(
+    history: GenerationHistory[],
+    wordCount: string
+  ): Promise<{ upperCouplet: string; lowerCouplet: string }> {
+    const candidates = history.filter(h => h.upperCouplet.length === parseInt(wordCount) && h.lowerCouplet.length === parseInt(wordCount));
+    
+    if (candidates.length === 0) {
+      return { upperCouplet: history[0].upperCouplet, lowerCouplet: history[0].lowerCouplet };
+    }
+
+    const userPrompt = buildElectionPrompt(candidates, wordCount);
+    const content = await this.callLLM(ELECTION_SYSTEM_PROMPT, userPrompt, 0.3);
+    const result = JSON.parse(content) as { selectedIndex: number; reason: string };
+
+    const selected = candidates[result.selectedIndex] || candidates[0];
+    return { upperCouplet: selected.upperCouplet, lowerCouplet: selected.lowerCouplet };
+  }
+
   private async callLLM(
     systemPrompt: string,
     userPrompt: string,
     temperature: number
   ): Promise<string> {
     const url = `${this.config.baseUrl}/chat/completions`;
-
-    console.log(`  调用 LLM: ${this.config.model} (temperature: ${temperature})`);
 
     const response = await fetch(url, {
       method: "POST",
@@ -454,13 +267,12 @@ export class SpringWorkflowService {
           { role: "user", content: userPrompt }
         ],
         temperature,
-        max_tokens: 1200
+        max_tokens: 500
       })
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`LLM请求失败: ${response.status} ${errorText}`);
+      throw new Error(`LLM请求失败: ${response.status}`);
     }
 
     const data = await response.json() as {

@@ -1,29 +1,47 @@
 /**
- * 主题分析结果结构
+ * 主题分析结果（精简版）
  */
-export interface TopicAnalysisResult {
-  /** 主题核心描述 */
-  themeCore: string;
-  /** 文化意象列表 */
-  culturalImagery: string[];
-  /** 马年元素列表 */
-  horseYearElements?: string[];
-  /** 程序员特色元素 */
-  programmerElements?: string[];
-  /** 情感基调 */
-  emotionalTone: string;
-  /** 核心名词 */
-  keyNouns: string[];
-  /** 核心动词 */
-  keyVerbs: string[];
-  /** 核心形容词 */
-  keyAdjectives: string[];
-  /** 对仗方向建议 */
-  coupletPairs: Array<{ upper: string; lower: string }>;
-  /** 横批方向 */
-  horizontalDirection: string;
-  /** 挥春主题规划 */
-  scrollThemes: Array<{ theme: string; keywords: string[] }>;
+export type TopicAnalysisResult = string;
+
+/**
+ * 上联生成结果
+ */
+export interface UpperCoupletResult {
+  /** 上联 */
+  upperCouplet: string;
+}
+
+/**
+ * 下联生成结果
+ */
+export interface LowerCoupletResult {
+  /** 下联 */
+  lowerCouplet: string;
+}
+
+/**
+ * 格式审查结果（宽松标准）
+ */
+export interface FormatReviewResult {
+  /** 是否通过审查 */
+  passed: boolean;
+  /** 错误列表 */
+  errors: Array<{
+    /** 错误类型 */
+    type: string;
+    /** 错误描述 */
+    message: string;
+  }>;
+  /** 改进建议 */
+  suggestions: string[];
+}
+
+/**
+ * 挥春生成结果
+ */
+export interface SpringScrollsResult {
+  /** 四个挥春 */
+  springScrolls: string[];
 }
 
 /**
@@ -38,6 +56,15 @@ export interface SpringFestivalResponse {
   horizontalScroll: string;
   /** 四个挥春 */
   springScrolls: string[];
+}
+
+/**
+ * 生成历史记录
+ */
+export interface GenerationHistory {
+  attempt: number;
+  upperCouplet: string;
+  lowerCouplet: string;
 }
 
 /**
@@ -68,21 +95,4 @@ export interface WorkflowResponse extends SpringFestivalResponse {
   formData?: FormData;
   /** 回退时的错误信息 */
   errorMessage?: string;
-}
-
-/**
- * 审查结果结构
- */
-export interface ReviewResult {
-  /** 是否通过审查 */
-  passed: boolean;
-  /** 错误列表 */
-  errors: Array<{
-    /** 错误类型 */
-    type: string;
-    /** 错误描述 */
-    message: string;
-  }>;
-  /** 改进建议 */
-  suggestions: string[];
 }

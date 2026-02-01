@@ -8,16 +8,24 @@ export {
 } from "./analysis.prompt";
 
 export {
-  SPRING_GENERATION_SYSTEM_PROMPT,
-  buildGenerationPrompt,
-  type GenerationHistory
-} from "./generation.prompt";
+  UPPER_COUPLET_SYSTEM_PROMPT,
+  buildUpperCoupletPrompt
+} from "./upper-couplet.prompt";
 
 export {
-  REVIEW_SYSTEM_PROMPT,
-  buildReviewPrompt,
-  type ReviewHistory
-} from "./review.prompt";
+  LOWER_COUPLET_SYSTEM_PROMPT,
+  buildLowerCoupletPrompt
+} from "./lower-couplet.prompt";
+
+export {
+  FORMAT_REVIEW_SYSTEM_PROMPT,
+  buildFormatReviewPrompt
+} from "./format-review.prompt";
+
+export {
+  SPRING_SCROLLS_SYSTEM_PROMPT,
+  buildSpringScrollsPrompt
+} from "./spring-scrolls.prompt";
 
 export {
   ELECTION_SYSTEM_PROMPT,
