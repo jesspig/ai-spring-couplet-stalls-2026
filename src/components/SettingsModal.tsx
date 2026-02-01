@@ -32,15 +32,47 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
     if (savedKey) setApiKey(savedKey);
   }, []);
 
-  // 保存设置到 localStorage
-  const handleSave = () => {
+  // 保存设置到 localStorage 并刷新模型列表
+  const handleSave = async () => {
+    if (!apiUrl.trim() || !apiKey.trim()) {
+      setTestStatus('error');
+      setTestMessage('请先填写 API URL 和 API Key');
+      return;
+    }
+
     localStorage.setItem('apiUrl', apiUrl);
     localStorage.setItem('apiKey', apiKey);
-    // 如果有获取到模型列表，传递给父组件更新下拉菜单
-    if (models.length > 0 && onModelsUpdate) {
-      onModelsUpdate(models);
+
+    setTestStatus('testing');
+    setTestMessage('正在获取模型列表...');
+
+    try {
+      const baseUrl = apiUrl.replace(/\/$/, '');
+      const response = await fetch(`${baseUrl}/models`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.data) {
+        setTestStatus('success');
+        setTestMessage(`保存成功！获取到 ${data.data.length} 个模型`);
+        setModels(data.data);
+        if (onModelsUpdate) {
+          onModelsUpdate(data.data);
+        }
+      } else {
+        setTestStatus('error');
+        setTestMessage(data.error?.message || '获取模型列表失败');
+      }
+    } catch (error) {
+      setTestStatus('error');
+      setTestMessage(error instanceof Error ? error.message : '请求失败');
     }
-    onClose();
   };
 
   // 测试连接
@@ -58,7 +90,6 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
 
     setTestStatus('testing');
     setTestMessage('正在测试连接...');
-    setModels([]);
 
     try {
       const baseUrl = apiUrl.replace(/\/$/, '');
@@ -72,10 +103,9 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
 
       const data = await response.json();
 
-      if (response.ok && data.data) {
+      if (response.ok) {
         setTestStatus('success');
-        setTestMessage(`连接成功！获取到 ${data.data.length} 个模型`);
-        setModels(data.data);
+        setTestMessage('连接成功！点击"保存"按钮保存配置并获取模型列表');
       } else {
         setTestStatus('error');
         setTestMessage(data.error?.message || '连接失败');
