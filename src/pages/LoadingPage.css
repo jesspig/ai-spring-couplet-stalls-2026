@@ -11,63 +11,319 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 24px;
+  gap: 16px;
   text-align: center;
+  width: 100%;
+  max-width: 500px;
 }
 
-.loading-spinner {
-  width: 64px;
-  height: 64px;
-  border: 4px solid var(--color-primary-light);
+.loading-title {
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  margin: 0;
+}
+
+.loading-title.failed,
+.loading-title.aborted {
+  color: #dc2626;
+}
+
+.loading-topic {
+  font-size: 0.95rem;
+  color: var(--color-text-light);
+  margin: 0;
+  padding: 6px 16px;
+  background: var(--color-paper);
+  border-radius: 16px;
+  border: 2px solid var(--color-gold);
+}
+
+/* 进度条 */
+.progress-bar-container {
+  width: 100%;
+  max-width: 320px;
+  height: 6px;
+  background: var(--color-primary-light);
+  border-radius: 3px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--color-primary) 0%, var(--color-gold) 100%);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  font-size: 0.75rem;
+  color: var(--color-primary);
+  font-weight: 600;
+}
+
+/* 步骤列表 - 直接展示 */
+.steps-container {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* 步骤项 - 紧凑模式 */
+.step-item {
+  background: var(--color-paper);
+  border: 1px solid var(--color-primary-light);
+  border-radius: 8px;
+  padding: 8px 12px;
+  transition: all 0.2s ease;
+}
+
+.step-item.expanded {
+  padding: 12px;
+  border-color: var(--color-primary);
+}
+
+.step-item.step-status-running {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px rgba(139, 69, 19, 0.1);
+}
+
+.step-item.step-status-completed {
+  border-color: var(--color-gold);
+}
+
+.step-item.step-status-failed {
+  border-color: #dc2626;
+}
+
+.step-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.step-number {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-light);
+  color: var(--color-primary);
+  font-weight: 600;
+  font-size: 0.8rem;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.step-status-running .step-number {
+  background: var(--color-primary);
+  color: white;
+}
+
+.step-status-completed .step-number {
+  background: var(--color-gold);
+  color: white;
+}
+
+.step-status-failed .step-number {
+  background: #dc2626;
+  color: white;
+}
+
+.step-status-icon {
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.step-status-pending .step-status-icon {
+  color: var(--color-text-light);
+}
+
+.step-status-running .step-status-icon {
+  color: var(--color-primary);
+}
+
+.step-status-completed .step-status-icon {
+  color: #16a34a;
+  font-weight: 700;
+}
+
+.step-status-failed .step-status-icon {
+  color: #dc2626;
+  font-weight: 700;
+}
+
+.spinner-small {
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--color-primary-light);
   border-top-color: var(--color-primary);
   border-radius: 50%;
-  animation: spin 1s linear infinite;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
 }
 
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
 
-.loading-title {
-  font-family: 'Noto Serif SC', serif;
-  font-size: 2rem;
-  font-weight: 700;
-  color: var(--color-primary);
-  margin: 0;
+.step-info {
+  flex: 1;
+  text-align: left;
+  min-width: 0;
 }
 
-.loading-topic {
-  font-size: 1.1rem;
+.step-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-text);
+}
+
+.step-item.compact .step-name {
+  font-size: 0.8rem;
+}
+
+.step-description {
+  font-size: 0.75rem;
   color: var(--color-text-light);
-  margin: 0;
-  padding: 8px 24px;
-  background: var(--color-paper);
-  border-radius: 20px;
-  border: 2px solid var(--color-gold);
+  margin-top: 2px;
 }
 
-.loading-message {
-  font-size: 1rem;
-  color: var(--color-gold-dark);
-  margin: 0;
-  min-height: 24px;
-  animation: fadeInOut 2s ease-in-out;
+.step-expand-btn {
+  padding: 4px 10px;
+  font-size: 0.7rem;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
 }
 
-@keyframes fadeInOut {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 1; }
+.step-expand-btn:hover {
+  background: var(--color-primary);
+  color: white;
 }
 
+/* 步骤输出内容 */
+.step-output,
+.step-error {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  text-align: left;
+}
+
+.step-output {
+  background: rgba(212, 175, 55, 0.1);
+  border-left: 2px solid var(--color-gold);
+}
+
+.step-error {
+  background: rgba(220, 38, 38, 0.1);
+  border-left: 2px solid #dc2626;
+}
+
+.step-output-content {
+  font-size: 0.85rem;
+  color: var(--color-text);
+  font-family: 'Noto Serif SC', serif;
+  word-break: break-all;
+  line-height: 1.4;
+}
+
+.step-error-content {
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+
+/* 操作按钮区域 */
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.abort-button {
+  padding: 10px 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #dc2626;
+  background: white;
+  border: 2px solid #dc2626;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.abort-button:hover {
+  background: #dc2626;
+  color: white;
+}
+
+.view-result-button {
+  padding: 10px 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: white;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-gold) 100%);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.view-result-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(139, 69, 19, 0.3);
+}
+
+@keyframes pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 69, 19, 0.4); }
+  50% { box-shadow: 0 0 0 8px rgba(139, 69, 19, 0); }
+}
+
+.back-home-button {
+  padding: 10px 28px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-primary);
+  background: white;
+  border: 2px solid var(--color-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-home-button:hover {
+  background: var(--color-primary);
+  color: white;
+}
+
+/* 装饰元素 */
 .loading-decorations {
   display: flex;
-  gap: 16px;
-  margin-top: 32px;
+  gap: 12px;
+  margin-top: 16px;
 }
 
 .fu-decoration {
   font-family: 'Noto Serif SC', serif;
-  font-size: 2rem;
+  font-size: 1.5rem;
   font-weight: 700;
   color: var(--color-gold);
   opacity: 0.6;
@@ -80,20 +336,33 @@
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-8px); }
 }
 
+/* 响应式适配 */
 @media (max-width: 768px) {
   .loading-title {
-    font-size: 1.5rem;
+    font-size: 1.4rem;
   }
-  
+
   .loading-topic {
-    font-size: 1rem;
+    font-size: 0.85rem;
   }
-  
+
+  .step-item {
+    padding: 6px 10px;
+  }
+
+  .step-item.expanded {
+    padding: 10px;
+  }
+
+  .step-name {
+    font-size: 0.8rem;
+  }
+
   .fu-decoration {
-    font-size: 1.5rem;
+    font-size: 1.3rem;
   }
 }
 
@@ -102,31 +371,58 @@
     padding: 16px;
   }
 
-  .loading-spinner {
-    width: 56px;
-    height: 56px;
+  .loading-content {
+    gap: 14px;
   }
 
   .loading-title {
-    font-size: 1.25rem;
+    font-size: 1.2rem;
   }
-  
+
   .loading-topic {
-    font-size: 0.9rem;
-    padding: 6px 20px;
+    font-size: 0.8rem;
+    padding: 5px 14px;
   }
-  
-  .loading-message {
-    font-size: 0.9rem;
+
+  .progress-bar-container {
+    max-width: 280px;
+  }
+
+  .step-header {
+    gap: 8px;
+  }
+
+  .step-number {
+    width: 20px;
+    height: 20px;
+    font-size: 0.75rem;
+  }
+
+  .step-status-icon {
+    width: 16px;
+    height: 16px;
+    font-size: 0.8rem;
+  }
+
+  .step-expand-btn {
+    padding: 3px 8px;
+    font-size: 0.65rem;
+  }
+
+  .abort-button,
+  .view-result-button,
+  .back-home-button {
+    padding: 8px 20px;
+    font-size: 0.85rem;
   }
 
   .loading-decorations {
-    gap: 12px;
-    margin-top: 24px;
+    gap: 10px;
+    margin-top: 14px;
   }
-  
+
   .fu-decoration {
-    font-size: 1.25rem;
+    font-size: 1.1rem;
   }
 }
 
@@ -136,51 +432,62 @@
   }
 
   .loading-content {
-    gap: 20px;
-  }
-
-  .loading-spinner {
-    width: 48px;
-    height: 48px;
+    gap: 12px;
   }
 
   .loading-title {
     font-size: 1.1rem;
   }
-  
+
   .loading-topic {
-    font-size: 0.85rem;
-    padding: 4px 16px;
+    font-size: 0.75rem;
+    padding: 4px 12px;
   }
-  
-  .loading-message {
-    font-size: 0.85rem;
+
+  .step-item {
+    padding: 6px 8px;
+  }
+
+  .step-item.expanded {
+    padding: 8px;
+  }
+
+  .step-info {
+    min-width: 0;
+  }
+
+  .step-name {
+    font-size: 0.75rem;
+  }
+
+  .step-output,
+  .step-error {
+    padding: 6px 8px;
+  }
+
+  .step-output-content {
+    font-size: 0.8rem;
   }
 
   .loading-decorations {
     gap: 8px;
-    margin-top: 20px;
+    margin-top: 12px;
   }
-  
+
   .fu-decoration {
     font-size: 1rem;
   }
 }
 
 @media (max-width: 375px) {
-  .loading-spinner {
-    width: 40px;
-    height: 40px;
-  }
-
   .loading-title {
     font-size: 1rem;
   }
-  
+
   .loading-topic {
-    font-size: 0.8rem;
+    font-size: 0.7rem;
   }
-  
+
   .fu-decoration {
     font-size: 0.9rem;
   }
