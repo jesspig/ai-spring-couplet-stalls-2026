@@ -9,10 +9,17 @@ export {
 
 export {
   SPRING_GENERATION_SYSTEM_PROMPT,
-  buildGenerationPrompt
+  buildGenerationPrompt,
+  type GenerationHistory
 } from "./generation.prompt";
 
 export {
   REVIEW_SYSTEM_PROMPT,
-  buildReviewPrompt
+  buildReviewPrompt,
+  type ReviewHistory
 } from "./review.prompt";
+
+export {
+  ELECTION_SYSTEM_PROMPT,
+  buildElectionPrompt
+} from "./election.prompt";

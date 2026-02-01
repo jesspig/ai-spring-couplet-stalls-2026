@@ -56,7 +56,28 @@ export default function LoadingPage() {
         console.log(`字数：${wordCount}字`);
 
         const workflowService = new SpringWorkflowService(apiUrl, apiKey, selectedModel);
-        const result = await workflowService.executeWorkflow(storedTopic, wordCount, false);
+        const formData = {
+          coupletOrder: (coupletOrder === 'leftUpper' ? 'upper-lower' : 'lower-upper') as 'upper-lower' | 'lower-upper',
+          horizontalDirection: (horizontalDirection === 'leftToRight' ? 'left-right' : 'right-left') as 'left-right' | 'right-left',
+          fuDirection: (fuOrientation === 'upright' ? 'upright' : 'rotated') as 'upright' | 'rotated'
+        };
+        const result = await workflowService.executeWorkflow(storedTopic, wordCount, false, formData);
+
+        // 检查是否需要回退到首页
+        if (result.shouldReturnToHome) {
+          console.log('\n=== 回退到首页 ===');
+          console.log('原因：', result.errorMessage);
+
+          setTimeout(() => {
+            navigate('/', {
+              state: {
+                formData: result.formData,
+                errorMessage: result.errorMessage
+              }
+            });
+          }, 1500);
+          return;
+        }
 
         sessionStorage.setItem('generatedData', JSON.stringify(result));
 

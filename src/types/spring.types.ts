@@ -41,11 +41,33 @@ export interface SpringFestivalResponse {
 }
 
 /**
+ * 表单信息结构（用于回退时恢复表单）
+ */
+export interface FormData {
+  /** 用户输入的主题 */
+  topic: string;
+  /** 字数选择 */
+  wordCount: string;
+  /** 对联顺序 */
+  coupletOrder: 'upper-lower' | 'lower-upper';
+  /** 横批方向 */
+  horizontalDirection: 'left-right' | 'right-left';
+  /** 福字方向 */
+  fuDirection: 'upright' | 'rotated';
+}
+
+/**
  * 完整工作流响应结构
  */
 export interface WorkflowResponse extends SpringFestivalResponse {
   /** 主题分析结果（可选，用于调试） */
   analysis?: TopicAnalysisResult;
+  /** 是否需要回退到首页 */
+  shouldReturnToHome?: boolean;
+  /** 回退时的表单信息 */
+  formData?: FormData;
+  /** 回退时的错误信息 */
+  errorMessage?: string;
 }
 
 /**

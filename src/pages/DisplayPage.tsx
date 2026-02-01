@@ -48,14 +48,19 @@ export default function DisplayPage() {
   };
 
   const handleReset = () => {
+    // 保留表单信息，只移除生成的数据
     sessionStorage.removeItem('generatedData');
-    sessionStorage.removeItem('topic');
-    sessionStorage.removeItem('selectedModel');
-    sessionStorage.removeItem('wordCount');
-    sessionStorage.removeItem('coupletOrder');
-    sessionStorage.removeItem('horizontalDirection');
-    sessionStorage.removeItem('fuOrientation');
-    navigate('/');
+
+    // 构建表单数据用于回退时恢复
+    const formData = {
+      topic: sessionStorage.getItem('topic') || '',
+      wordCount: sessionStorage.getItem('wordCount') || '7',
+      coupletOrder: (sessionStorage.getItem('coupletOrder') === 'leftUpper' ? 'upper-lower' : 'lower-upper') as 'upper-lower' | 'lower-upper',
+      horizontalDirection: (sessionStorage.getItem('horizontalDirection') === 'leftToRight' ? 'left-right' : 'right-left') as 'left-right' | 'right-left',
+      fuDirection: (sessionStorage.getItem('fuOrientation') === 'upright' ? 'upright' : 'rotated') as 'upright' | 'rotated'
+    };
+
+    navigate('/', { state: { formData } });
   };
 
   return (

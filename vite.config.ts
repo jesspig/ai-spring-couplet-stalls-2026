@@ -8,5 +8,11 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: "dist",
     emptyOutDir: true
+  },
+  // Yarn PnP 支持 - 使用 Vite 的内置支持，不需要手动配置 alias
+  // Vite 会自动检测并使用 .pnp.cjs 进行模块解析
+  // 优化依赖预构建
+  optimizeDeps: {
+    include: ['react', 'react-dom', 'react-router-dom']
   }
 }));

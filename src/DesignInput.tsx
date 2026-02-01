@@ -1,21 +1,54 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import SettingsButton from './components/SettingsButton';
 import type { Model, ModelsResponse } from './types/model.types';
+import type { FormData } from './types/spring.types';
 import './DesignInput.css';
 
 export default function DesignInput() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [topic, setTopic] = useState('');
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [returnError, setReturnError] = useState<string | null>(null);
 
-  const [wordCount, setWordCount] = useState('7');
+  const [wordCount, setWordCount] = useState('5');
   const [coupletOrder, setCoupletOrder] = useState('rightUpper');
   const [horizontalDirection, setHorizontalDirection] = useState('rightToLeft');
   const [fuOrientation, setFuOrientation] = useState('upright');
+
+  // 从location.state恢复表单数据
+  useEffect(() => {
+    const state = location.state as { formData?: FormData; errorMessage?: string } | null;
+    if (state?.formData) {
+      setTopic(state.formData.topic);
+      setWordCount(state.formData.wordCount);
+      // 转换coupletOrder格式
+      const orderMap: Record<string, string> = {
+        'upper-lower': 'leftUpper',
+        'lower-upper': 'rightUpper'
+      };
+      setCoupletOrder(orderMap[state.formData.coupletOrder] || 'rightUpper');
+      // 转换horizontalDirection格式
+      const directionMap: Record<string, string> = {
+        'left-right': 'leftToRight',
+        'right-left': 'rightToLeft'
+      };
+      setHorizontalDirection(directionMap[state.formData.horizontalDirection] || 'rightToLeft');
+      // 转换fuDirection格式
+      const fuMap: Record<string, string> = {
+        'upright': 'upright',
+        'rotated': 'inverted'
+      };
+      setFuOrientation(fuMap[state.formData.fuDirection] || 'upright');
+    }
+    if (state?.errorMessage) {
+      setReturnError(state.errorMessage);
+    }
+  }, [location.state]);
 
   useEffect(() => {
     const apiUrl = localStorage.getItem('apiUrl') || '';
@@ -120,7 +153,21 @@ export default function DesignInput() {
           <h1 className="design-title">AI "码"年挥春小摊</h1>
           <SettingsButton onModelsUpdate={handleModelsUpdate} />
         </div>
-        
+
+        {returnError && (
+          <div className="error-message" style={{
+            backgroundColor: '#fff2f0',
+            border: '1px solid #ffccc7',
+            borderRadius: '6px',
+            padding: '12px 16px',
+            marginBottom: '16px',
+            color: '#cf1322',
+            fontSize: '14px'
+          }}>
+            {returnError}
+          </div>
+        )}
+
         <p className="design-subtitle">输入一个主题，AI为您创作专属春联</p>
         
         <textarea

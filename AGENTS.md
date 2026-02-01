@@ -1,363 +1,219 @@
-# AGENTS.md - 项目说明文档
+# AI "码"年挥春小摊 - 项目文档
 
 ## 项目概述
 
-**AI "码"年挥春小摊** - 基于 AI 的春联创作平台
-
-这是一个纯前端实现的春联生成应用，利用大语言模型通过三阶段工作流自动创作符合中国传统文化规范的春联（上联、下联、横批）和挥春。项目采用 React + Vite + TypeScript 技术栈，支持多种 OpenAI 兼容 API 服务，可直接部署到 GitHub Pages 等静态托管平台。
+**AI "码"年挥春小摊**是一个基于 React + TypeScript 的现代化 Web 应用，利用大语言模型（LLM）为用户生成定制化的春联作品。该项目融合了传统文化与现代 AI 技术，为用户提供创意春联生成服务。
 
 ### 核心功能
 
+- **智能春联生成**：基于用户输入的主题，生成符合平仄、对仗规则的春联
 - **三阶段工作流**：主题分析 → 春联生成 → 质量审查，确保生成质量
-- **春联生成**：根据主题自动创作符合平仄对仗规则的春联
-- **挥春创作**：生成四个与主题相关的吉祥挥春
-- **多模型支持**：支持 OpenAI 及其他兼容的 API 服务
-- **灵活配置**：支持字数（5/7/9字）、对联顺序、横批方向、福字方向等配置
-- **自动审查**：内置质量审查机制，最多重试 3 次
-- **精美展示**：传统风格的春联展示界面，支持实时布局调整
-- **详细日志**：控制台输出完整的生成过程日志
+- **布局自定义**：支持调整对联顺序、横批方向、福字方向等
+- **传统设计风格**：采用中文传统节日设计语言，包含优雅的配色和排版
 
-### 核心技术栈
+### 技术栈
 
-**前端应用**
-
-- **框架**: React 18
-- **构建工具**: Vite 6.x
-- **路由管理**: React Router v7
-- **语言**: TypeScript (ES2022)
-- **包管理器**: Yarn 4.x
-- **部署**: GitHub Pages 等静态托管平台
-
-**设计风格**
-
-- **UI 风格**: 夸张极简主义（Exaggerated Minimalism）
-- **字体**: Noto Serif TC + Noto Sans TC
-- **配色**: 中国新年红金主题
-
-### 架构特点
-
-- 纯前端架构，无需后端服务器
-- 三阶段工作流确保春联质量
-- 直接调用 OpenAI 兼容 API
-- 完整的 TypeScript 类型支持
-- 模块化架构，组件、服务、配置分离
-- 支持灵活的配置选项
-- 可部署到任何静态托管平台
+- **前端框架**：React 18.3.1 + TypeScript
+- **构建工具**：Vite 6.0.7
+- **路由**：React Router DOM 7.13.0
+- **样式**：原生 CSS + Google Fonts（Noto Serif TC + Noto Sans TC）
+- **设计系统**：自定义中文传统设计规范
 
 ## 项目结构
 
-```
-trae_demo_04/
-├── src/
-│   ├── components/               # React 组件
-│   │   ├── SettingsButton.tsx    # 设置按钮组件
-│   │   ├── SettingsModal.tsx     # 设置弹窗组件
-│   │   └── Settings.css          # 设置样式
-│   ├── pages/                    # 页面组件
-│   │   ├── DisplayPage.tsx       # 春联展示页面（含实时控制面板）
-│   │   ├── DisplayPage.css       # 展示页面样式
-│   │   ├── LoadingPage.tsx       # 加载页面（执行工作流）
-│   │   └── LoadingPage.css       # 加载页面样式
-│   ├── config/
-│   │   └── prompts.config.ts     # 三阶段工作流提示词配置
-│   ├── services/
-│   │   └── spring-workflow.service.ts  # 春联生成工作流服务
-│   ├── App.tsx                   # 主应用组件
-│   ├── App.css                   # 应用样式
-│   ├── DesignInput.tsx           # 主设计输入组件
-│   ├── DesignInput.css           # 设计输入样式
-│   ├── main.tsx                  # React 入口
-│   ├── routes.tsx                # 路由配置
-│   └── style.css                 # 全局样式
-├── public/
-│   ├── 404.html                  # GitHub Pages SPA 路由支持
-│   └── vite.svg                  # Vite 图标
-├── design-system/                # 设计系统
-│   └── ai-码年挥春小摊/
-│       └── MASTER.md             # 设计系统主文档
-├── index.html                    # HTML 模板
-├── package.json                  # 项目配置
-├── tsconfig.json                 # TypeScript 配置
-├── vite.config.ts                # Vite 配置（支持双环境）
-├── .editorconfig                 # 编辑器统一配置
-└── README.md                     # 项目说明
+```plaintext
+src/
+├── components/          # React 组件
+│   ├── SettingsButton.tsx    # 设置按钮组件
+│   └── SettingsModal.tsx     # 设置弹窗组件
+├── config/             # 配置文件
+│   └── prompts/        # LLM 提示词配置
+│       ├── analysis.prompt.ts     # 主题分析提示词
+│       ├── generation.prompt.ts   # 春联生成提示词
+│       ├── review.prompt.ts       # 质量审查提示词
+│       └── election.prompt.ts     # 选举机制提示词
+├── pages/              # 页面组件
+│   ├── DisplayPage.tsx    # 显示页面
+│   ├── LoadingPage.tsx    # 加载页面
+│   └── DisplayPage.css    # 显示页面样式
+├── services/           # 服务层
+│   └── spring-workflow.service.ts  # 春联工作流服务
+├── types/              # TypeScript 类型定义
+│   ├── model.types.ts     # 模型类型
+│   └── spring.types.ts    # 春联相关类型
+├── utils/              # 工具函数
+│   └── json-parser.util.ts # JSON 解析工具
+├── App.tsx             # 根组件
+├── DesignInput.tsx     # 设计输入页面
+├── main.tsx            # 应用入口
+└── routes.tsx          # 路由配置
 ```
 
 ## 构建和运行
 
-### 依赖安装
+### 环境要求
+
+- Node.js 18+
+- Yarn 包管理器
+
+### 开发命令
 
 ```bash
+# 安装依赖
 yarn install
-```
 
-### 开发模式
-
-```bash
+# 启动开发服务器
 yarn dev
-```
 
-服务将运行在 <http://localhost:5173>
-
-### 构建生产版本
-
-```bash
+# 构建生产版本
 yarn build
-```
 
-编译输出到 `dist/` 目录。
-
-### 预览构建结果
-
-```bash
+# 预览构建结果
 yarn preview
-```
 
-### 预览 GitHub Pages 部署效果
-
-```bash
+# GitHub Pages 部署（构建并预览）
 yarn dev:gh
 ```
 
-此命令会构建项目并使用正确的仓库名路径预览，用于本地验证 GitHub Pages 部署效果。
+### 开发服务器
 
-## 使用指南
+开发服务器默认运行在 `http://localhost:5173`
 
-### 通过 Web 界面
-
-1. 启动开发服务器：`yarn dev`
-2. 访问 <http://localhost:5173>
-3. 点击设置按钮配置 API URL 和 API Key
-4. 输入主题（如：马年、科技、家庭、事业等）
-5. 选择字数（5字、7字、9字）
-6. 选择对联顺序（左上右下、右上左下）
-7. 选择横批方向（左到右、右到左）
-8. 选择福字方向（正贴、倒贴）
-9. 选择模型
-10. 点击"开始设计"
-
-### 展示页面实时调整
-
-春联生成后，在展示页面可以通过左侧控制面板实时调整：
-
-- **对联顺序**：切换左上右下 / 右上左下布局
-- **横批方向**：切换左到右 / 右到左显示
-- **福字方向**：切换正贴 / 倒贴显示
-- 点击"再写一副"返回重新设计
-
-移动端控制面板自动调整为顶部横向布局。
-
-### 控制台日志
-
-生成过程中，控制台会输出详细的日志：
-
-```
-=== 开始春联生成工作流 ===
-主题：马年
-字数：7字
-
-=== 尝试 1/3 ===
-  调用 LLM: gpt-4 (temperature: 0.7)
-✓ 主题分析完成
-  调用 LLM: gpt-4 (temperature: 0.8)
-✓ 春联生成完成
-  上联：龙腾盛世千家喜
-  下联：春满神州万象新
-  调用 LLM: gpt-4 (temperature: 0.3)
-✓ 质量审查完成
-✓ 审查通过！
-
-=== 春联生成成功 ===
-```
-
-## 工作流说明
-
-春联生成采用三阶段工作流，确保生成质量：
-
-### 阶段1：主题分析（temperature: 0.7）
-
-- 深入分析用户主题
-- 提取文化意象、关键词汇
-- 规划对仗方向和挥春主题
-- 生成结构化的创作提示词
-
-### 阶段2：春联生成（temperature: 0.8）
-
-- 基于主题分析结果生成春联
-- 严格遵循字数、平仄、对仗规则
-- 生成上联、下联、横批和四个挥春
-- 如有审查错误，会传入改进建议
-
-### 阶段3：质量审查（temperature: 0.3）
-
-- 审查字数是否正确
-- 检查平仄格式（上仄下平）
-- 验证对仗工整程度
-- 检查意义相关性和用词规范
-- 最多重试 3 次，直到通过审查
-
-## 春联生成规则
-
-系统根据以下规则生成春联：
-
-- **字数选择**：支持 5 字、7 字、9 字春联
-- **上联**：指定字数，仄声结尾（三声、四声）
-- **下联**：与上联字数相等，平声结尾（一声、二声）
-- **横批**：4 个字，概括主题
-- **挥春**：4 个，每个 4 字，内容吉利喜庆
-- 上下联必须对仗工整，意境相符
-- 内容贴合用户主题，寓意吉祥如意
-- 可适当融入马年元素或程序员元素（以不破坏通顺和工整为前提）
-
-## 设计系统
-
-### 配色方案
-
-| 角色 | Hex | CSS 变量 |
-|------|-----|----------|
-| Primary | `#DC2626` | `--color-primary` |
-| Primary Dark | `#991B1B` | `--color-primary-dark` |
-| Primary Light | `#FEE2E2` | `--color-primary-light` |
-| Gold | `#CA8A04` | `--color-gold` |
-| Gold Light | `#FDE68A` | `--color-gold-light` |
-| Gold Dark | `#92400E` | `--color-gold-dark` |
-| Background | `#FEF2F2` | `--color-bg` |
-| Paper | `#FFF8F0` | `--color-paper` |
-| Text | `#450A0A` | `--color-text` |
-| Text Light | `#7F1D1D` | `--color-text-light` |
-
-### 字体
-
-- **标题字体**: Noto Serif TC
-- **正文字体**: Noto Sans TC
-- **风格**: 传统、优雅、文化、多语言
-
-### 设计风格
-
-**风格**: 夸张极简主义（Exaggerated Minimalism）
-
-**关键词**: 粗犷极简、超大排版、高对比度、负空间、响亮极简、宣言式设计
-
-**适用场景**: 时尚、建筑、作品集、落地页、奢侈品、编辑风格
-
-### 组件规范
-
-详细的设计规范请参考 `design-system/ai-码年挥春小摊/MASTER.md`
-
-## 开发规范
+## 开发约定
 
 ### 代码风格
 
-- **缩进**: 2 空格（Editorconfig 配置）
-- **换行符**: LF
-- **字符编码**: UTF-8
-- **文件结尾**: 必须包含换行符
+- **函数长度**：不超过 25 行，单一职责，最大 3 层嵌套
+- **类型安全**：所有函数和方法必须有完整的 TypeScript 类型定义
+- **注释规范**：
+  - 类和方法必须使用 XML 文档注释
+  - 字段和属性必须添加行间用途说明
+  - 方法内仅复杂逻辑需添加行间注释
+- **文件命名**：使用 PascalCase 命名组件文件，camelCase 命名其他文件
 
-### TypeScript 配置
+### 设计系统
 
-- **目标**: ES2022
-- **模块**: ESNext
-- **严格模式**: 启用
-- **模块解析**: bundler
-- **输出目录**: `dist/`
+项目遵循自定义的中文传统设计规范（详见 `design-system/ai-码年挥春小摊/MASTER.md`）：
 
-### 命名约定
+- **配色方案**：深蓝 (#0F172A) + 金色 (#CA8A04) + 浅灰 (#F8FAFC)
+- **字体**：Noto Serif TC（标题）+ Noto Sans TC（正文）
+- **间距**：基于 4px 基础单位的系统（--space-xs 到 --space-3xl）
+- **阴影**：--shadow-sm 到 --shadow-xl 五级阴影系统
+- **设计风格**：夸张极简主义（Bold Minimalism）
 
-- **文件名**: 小写，使用短横线分隔（如 `loading-page.css`）
-- **类名**: 大驼峰（如 `SpringWorkflowService`）
-- **接口/类型**: 大驼峰（如 `SpringFestivalResponse`）
-- **函数/变量**: 小驼峰（如 `generateSpringFestival`）
+### API 集成
 
-### 注释规范
+项目通过 `spring-workflow.service.ts` 与 LLM API 集成：
 
-- 使用中文注释
-- 公共 API 必须添加 JSDoc 注释
-- 复杂逻辑添加行内注释说明
+- **工作流**：三阶段（分析 → 生成 → 审查）
+- **容错机制**：最大 5 次重试，失败时自动选举最优候选
+- **参数配置**：支持温度参数、最大 token 数等 LLM 参数
+- **错误分类**：格式错误、平仄不合规、对仗不工整、内容问题等
 
-### 项目约定
+### 状态管理
 
-- 代码即文档：结构与命名必须自解释
-- 零技术债务：立即清除临时代码和调试残留
-- 最小抽象：≤3 行代码不创建函数
-- 禁止过度设计、抽象和优化
-- 函数不超过 25 行，单一职责
-- 所有回复、注释及文档必须使用中文
+- **SessionStorage**：存储生成数据、表单数据和用户偏好
+- **React Router**：管理页面路由和状态传递
+- **表单恢复**：支持从失败状态恢复用户输入
 
-## 常见任务
+## 部署说明
 
-### 修改春联生成提示词
+### GitHub Pages 部署
 
-编辑 `src/config/prompts.config.ts` 文件，修改以下常量：
-- `TOPIC_ANALYSIS_SYSTEM_PROMPT` - 主题分析系统提示词
-- `SPRING_GENERATION_SYSTEM_PROMPT` - 春联生成系统提示词
-- `REVIEW_SYSTEM_PROMPT` - 质量审查系统提示词
+项目配置了 GitHub Actions 自动部署工作流：
 
-### 修改工作流逻辑
-
-编辑 `src/services/spring-workflow.service.ts` 文件，修改 `SpringWorkflowService` 类：
-- `executeWorkflow()` - 主工作流执行逻辑
-- `analyzeTopic()` - 主题分析阶段
-- `generateSpringFestival()` - 春联生成阶段
-- `reviewSpringFestival()` - 质量审查阶段
-
-### 添加新的前端组件
-
-1. 在 `src/components/` 创建组件文件
-2. 使用 TypeScript + React 编写组件
-3. 遵循设计系统规范（参考 `design-system/`）
-4. 在需要的地方导入使用
-
-### 添加新的页面
-
-1. 在 `src/pages/` 创建页面组件文件
-2. 更新 `src/routes.tsx` 添加新路由
-3. 遵循设计系统规范
-
-### 修改样式
-
-全局样式：编辑 `src/style.css`
-组件样式：编辑对应的 `.css` 文件
-设计系统：更新 `design-system/ai-码年挥春小摊/MASTER.md`
-
-## 部署到 GitHub Pages
-
-项目已配置支持 GitHub Pages 部署，采用双环境配置策略：
+1. 推送代码到 `main` 分支
+2. GitHub Actions 自动构建并部署到 GitHub Pages
+3. 构建产物输出到 `dist/` 目录
 
 ### 环境配置
 
-`vite.config.ts` 已配置动态 `base` 路径：
-- 开发环境：使用根路径 `/`
-- 生产环境：使用仓库名路径 `/ai-spring-couplet-stalls-2026/`
+应用需要配置以下环境变量：
 
-### 部署步骤
+- `apiUrl`：LLM API 服务地址
+- `apiKey`：LLM API 访问密钥
+- `cachedModels`：本地缓存的模型列表
+- `cachedSelectedModel`：用户上次选择的模型
 
-1. **构建项目**
+## 关键文件说明
 
-```bash
-yarn build
-```
+### 1. `src/services/spring-workflow.service.ts`
 
-2. **本地预览部署效果**
+春联生成的核心服务，实现三阶段工作流：
 
-```bash
-yarn dev:gh
-```
+- **analyzeTopic()**：主题分析和结构化提示词生成
+- **generateSpringFestival()**：基于分析结果生成春联
+- **reviewSpringFestival()**：质量审查和错误检测
+- **executeWorkflow()**：完整的三阶段工作流执行
 
-3. **部署到 GitHub Pages**
+### 2. `src/config/prompts/`
 
-将 `dist` 目录推送到 GitHub Pages，或使用 GitHub Actions 自动部署。
+包含所有 LLM 提示词的配置文件：
 
-### SPA 路由支持
+- **analysis.prompt.ts**：主题分析系统提示词
+- **generation.prompt.ts**：春联生成系统提示词
+- **review.prompt.ts**：质量审查系统提示词
+- **election.prompt.ts**：候选选举系统提示词
 
-项目包含 `public/404.html` 用于 GitHub Pages 客户端路由支持，解决直接访问子路由时的 404 问题。
+### 3. `src/types/spring.types.ts`
+
+定义所有类型安全的接口：
+
+- **TopicAnalysisResult**：主题分析结果结构
+- **SpringFestivalResponse**：春联生成响应结构
+- **WorkflowResponse**：完整工作流响应结构
+- **ReviewResult**：审查结果结构
+
+### 4. `design-system/ai-码年挥春小摊/MASTER.md`
+
+设计系统主文件，定义：
+
+- 配色方案和 CSS 变量
+- 字体规范和 Google Fonts 引用
+- 间距系统和阴影规范
+- 组件规范（按钮、卡片、输入框、模态框）
+- 设计风格和最佳实践
+- 禁止使用的模式和反模式
+
+## 使用指南
+
+### 用户操作流程
+
+1. **输入主题**：在 `DesignInput` 页面输入主题（如"马年"、"科技"等）
+2. **选择配置**：
+   - 字数：5字、7字或9字
+   - 对联顺序：左上右下或右上左下
+   - 横批方向：左到右或右到左
+   - 福字方向：正贴或倒贴
+3. **选择模型**：从下拉菜单选择可用的 LLM 模型
+4. **开始生成**：点击"开始设计"进入加载页面
+5. **查看结果**：在显示页面查看生成的春联和挥春
+6. **自定义调整**：在显示页面调整布局设置
+7. **重新生成**：点击"再写一副"回到输入页面
+
+### 设置配置
+
+点击右上角的设置按钮可以：
+
+- 更新可用的 LLM 模型列表
+- 配置 API 服务地址和密钥
+- 清除缓存数据
 
 ## 注意事项
 
-- 这是一个纯前端项目，无需后端服务器
-- API Key 存储在浏览器 localStorage 中
-- 春联生成需要有效的 LLM API 配置
-- 生成过程中会进行多次 API 调用（工作流）
-- 建议使用具有良好中文能力的模型
-- 控制台日志包含完整的生成过程，便于调试
-- 设计系统变更需同步更新 `design-system/` 目录下的文档
-- GitHub Pages 部署需使用 `yarn dev:gh` 验证路径配置
+1. **API 配置**：首次使用前必须在设置中配置 LLM API 服务
+2. **字数限制**：建议使用 5、7、9 字的春联，更易生成符合平仄规则的作品
+3. **主题质量**：提供清晰、具体的主题描述有助于生成更好的春联
+4. **浏览器兼容性**：项目使用现代 CSS 特性，建议使用最新版本的 Chrome、Firefox、Safari 等现代浏览器
+
+## 开发建议
+
+1. **新增功能**：遵循现有的设计系统和代码风格
+2. **错误处理**：在 `spring-workflow.service.ts` 中添加新的错误分类
+3. **提示词优化**：在 `src/config/prompts/` 中修改提示词时，先备份原版本
+4. **测试**：使用 React Testing Library 或 Cypress 进行组件测试
+5. **性能优化**：对于大型组件，考虑使用 React.memo 或 useMemo 优化性能
+
+## 许可证
+
+本项目采用 MIT 许可证，详见项目根目录的 LICENSE 文件。
