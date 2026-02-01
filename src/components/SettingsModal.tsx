@@ -32,7 +32,7 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
     if (savedKey) setApiKey(savedKey);
   }, []);
 
-  // 保存设置到 localStorage 并传递模型列表到下拉菜单
+  // 保存设置到 localStorage 并刷新模型列表
   const handleSave = () => {
     if (!apiUrl.trim() || !apiKey.trim()) {
       setTestStatus('error');
@@ -40,11 +40,18 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
       return;
     }
 
+    // 检查是否已通过测试获取到模型列表
+    if (models.length === 0) {
+      setTestStatus('error');
+      setTestMessage('请先点击"测试连接"验证配置');
+      return;
+    }
+
     localStorage.setItem('apiUrl', apiUrl);
     localStorage.setItem('apiKey', apiKey);
 
-    // 将模型列表传递到下拉菜单
-    if (models.length > 0 && onModelsUpdate) {
+    // 将测试获取的模型列表传递到下拉菜单
+    if (onModelsUpdate) {
       onModelsUpdate(models);
     }
 

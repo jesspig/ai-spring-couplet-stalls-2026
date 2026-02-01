@@ -13,6 +13,7 @@ export default function DesignInput() {
   const [selectedModel, setSelectedModel] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const [errorType, setErrorType] = useState<'unconfigured' | 'fetchFailed' | null>(null);
   const [returnError, setReturnError] = useState<string | null>(null);
 
   const [wordCount, setWordCount] = useState('5');
@@ -84,6 +85,7 @@ export default function DesignInput() {
 
     if (!apiUrl || !apiKey) {
       setError(true);
+      setErrorType('unconfigured');
       setLoading(false);
       return;
     }
@@ -111,6 +113,7 @@ export default function DesignInput() {
       .catch(() => {
         if (!cachedModels) {
           setError(true);
+          setErrorType('fetchFailed');
         }
         setLoading(false);
       });
@@ -120,6 +123,7 @@ export default function DesignInput() {
     setModels(newModels);
     localStorage.setItem('cachedModels', JSON.stringify(newModels));
     setError(false);
+    setErrorType(null);
     if (newModels.length > 0) {
       const currentExists = newModels.some(m => m.id === selectedModel);
       if (!currentExists) {
@@ -275,7 +279,9 @@ export default function DesignInput() {
             {loading ? (
               <span className="model-status">加载模型中...</span>
             ) : error || models.length === 0 ? (
-              <span className="model-status error">暂未配置模型，请点击设置</span>
+              <span className="model-status error">
+                {errorType === 'fetchFailed' ? '获取模型列表失败' : '暂未配置模型，请点击设置'}
+              </span>
             ) : (
               <select
                 value={selectedModel}
