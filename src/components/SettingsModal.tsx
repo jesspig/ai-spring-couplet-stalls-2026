@@ -62,7 +62,7 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
 
     try {
       const baseUrl = apiUrl.replace(/\/$/, '');
-      const response = await fetch(`${baseUrl}/v1/models`, {
+      const response = await fetch(`${baseUrl}/models`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${apiKey}`,

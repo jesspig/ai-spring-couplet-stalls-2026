@@ -77,7 +77,7 @@ export default function DesignInput() {
     }
 
     const baseUrl = apiUrl.replace(/\/$/, '');
-    fetch(`${baseUrl}/v1/models`, {
+    fetch(`${baseUrl}/models`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${apiKey}`,

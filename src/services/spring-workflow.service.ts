@@ -98,7 +98,7 @@ export class SpringWorkflowService {
   constructor(baseUrl: string, apiKey: string, model: string) {
     const trimmedUrl = baseUrl.replace(/\/$/, "");
     this.config = {
-      baseUrl: trimmedUrl.endsWith("/v1") ? trimmedUrl.slice(0, -3) : trimmedUrl,
+      baseUrl: trimmedUrl,
       apiKey,
       model
     };
@@ -437,7 +437,7 @@ export class SpringWorkflowService {
     userPrompt: string,
     temperature: number
   ): Promise<string> {
-    const url = `${this.config.baseUrl}/v1/chat/completions`;
+    const url = `${this.config.baseUrl}/chat/completions`;
 
     console.log(`  调用 LLM: ${this.config.model} (temperature: ${temperature})`);
 
