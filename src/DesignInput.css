@@ -199,6 +199,20 @@
 }
 
 /* 响应式设计 */
+@media (max-width: 1024px) {
+  .design-card {
+    padding: 32px;
+  }
+
+  .design-title {
+    font-size: 1.75rem;
+  }
+
+  .design-textarea {
+    min-height: 140px;
+  }
+}
+
 @media (max-width: 768px) {
   .design-card {
     padding: 24px;
@@ -244,5 +258,128 @@
     font-size: 2.5rem;
     width: 50px;
     height: 50px;
+  }
+}
+
+@media (max-width: 640px) {
+  .design-container {
+    padding: 16px;
+  }
+
+  .design-card {
+    padding: 20px;
+    border-width: 3px;
+  }
+
+  .design-card::before {
+    border-width: 1px;
+  }
+
+  .design-title {
+    font-size: 1.25rem;
+  }
+
+  .design-subtitle {
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+  }
+
+  .design-textarea {
+    padding: 12px;
+    font-size: 15px;
+    min-height: 120px;
+  }
+
+  .option-label {
+    font-size: 13px;
+  }
+
+  .option-btn {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .model-select {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+
+  .decorations {
+    gap: 12px;
+    top: 10px;
+  }
+
+  .deco-item {
+    font-size: 2rem;
+    width: 40px;
+    height: 40px;
+    border-width: 2px;
+  }
+}
+
+@media (max-width: 480px) {
+  .design-container {
+    padding: 12px;
+  }
+
+  .design-card {
+    padding: 16px;
+    border-width: 2px;
+  }
+
+  .design-title {
+    font-size: 1.1rem;
+  }
+
+  .design-subtitle {
+    font-size: 0.85rem;
+  }
+
+  .design-textarea {
+    padding: 10px;
+    font-size: 14px;
+    min-height: 100px;
+  }
+
+  .design-options {
+    gap: 10px;
+  }
+
+  .option-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+    min-height: 36px;
+  }
+
+  .model-select {
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+
+  .decorations {
+    display: none;
+  }
+}
+
+@media (max-width: 375px) {
+  .design-container {
+    padding: 10px;
+  }
+
+  .design-card {
+    padding: 12px;
+  }
+
+  .design-title {
+    font-size: 1rem;
+  }
+
+  .design-textarea {
+    min-height: 90px;
+  }
+
+  .option-btn {
+    padding: 5px 6px;
+    font-size: 10px;
   }
 }
