@@ -8,7 +8,9 @@ import {
   SPRING_SCROLLS_SYSTEM_PROMPT,
   buildSpringScrollsPrompt,
   ELECTION_SYSTEM_PROMPT,
-  buildElectionPrompt
+  buildElectionPrompt,
+  HORIZONTAL_SCROLL_SYSTEM_PROMPT,
+  buildHorizontalScrollPrompt
 } from "../config/prompts";
 import { parseLLMJson } from "../utils/json-parser.util";
 import type {
@@ -382,7 +384,7 @@ export class SpringWorkflowService {
 
       // 如果挥春生成失败，使用默认挥春
       if (!scrollsSuccess) {
-        springScrolls = ['万事如意', '前程似锦', '阖家欢乐', '马到成功'];
+        springScrolls = ['万事如意', '前程似锦', '阖家欢乐', '马到成功', '身体健康', '财源广进'];
         console.log(`  使用默认挥春：${springScrolls.join('、')}`);
         
         // 发送挥春生成完成事件（默认）
@@ -398,7 +400,7 @@ export class SpringWorkflowService {
       // 第三步：生成横批
       this.checkAborted();
       console.log(`\n  [步骤4] 生成横批`);
-      
+
       // 发送横批生成开始事件
       this.emit({
         type: 'horizontal_scroll_start',
@@ -407,9 +409,9 @@ export class SpringWorkflowService {
         stepDescription: '点睛横批，统揽全联'
       });
 
-      const horizontalScroll = this.generateHorizontalScroll(topic, analysis);
+      const horizontalScroll = await this.generateHorizontalScroll(topic, upperCouplet, lowerCouplet, analysis);
       console.log(`  横批生成：${horizontalScroll}`);
-      
+
       // 发送横批生成完成事件
       this.emit({
         type: 'horizontal_scroll_complete',
@@ -523,11 +525,17 @@ export class SpringWorkflowService {
     return result.springScrolls;
   }
 
-  private generateHorizontalScroll(topic: string, analysis: TopicAnalysisResult): string {
-    const commonScrolls = ['万事如意', '前程似锦', '阖家欢乐', '马到成功', '春满人间'];
-    const selected = commonScrolls[Math.floor(Math.random() * commonScrolls.length)];
-    console.log(`  横批选择：从${commonScrolls.length}个选项中随机选择`);
-    return selected;
+  private async generateHorizontalScroll(
+    topic: string,
+    upperCouplet: string,
+    lowerCouplet: string,
+    analysis: TopicAnalysisResult
+  ): Promise<string> {
+    console.log(`  调用LLM：横批生成`);
+    const userPrompt = buildHorizontalScrollPrompt(topic, upperCouplet, lowerCouplet, analysis);
+    const content = await this.callLLM(HORIZONTAL_SCROLL_SYSTEM_PROMPT, userPrompt, 0.8);
+    const result = parseLLMJson<{ horizontalScroll: string }>(content);
+    return result.horizontalScroll;
   }
 
   private async electBestCandidate(

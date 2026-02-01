@@ -40,7 +40,7 @@ export interface FormatReviewResult {
  * 挥春生成结果
  */
 export interface SpringScrollsResult {
-  /** 四个挥春 */
+  /** 六个挥春 */
   springScrolls: string[];
 }
 
@@ -54,7 +54,7 @@ export interface SpringFestivalResponse {
   lowerCouplet: string;
   /** 横批 */
   horizontalScroll: string;
-  /** 四个挥春 */
+  /** 六个挥春 */
   springScrolls: string[];
 }
 
