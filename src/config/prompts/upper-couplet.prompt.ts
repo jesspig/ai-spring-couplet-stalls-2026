@@ -13,6 +13,8 @@ export function buildUpperCoupletPrompt(
   const wordCountText = wordCount === '5' ? '五言' : wordCount === '7' ? '七言' : '九言';
   return `为主题"${topic}"生成${wordCountText}上联。
 
+年份信息：2026丙午马年
+
 ## 创作指导
 ${analysis}
 

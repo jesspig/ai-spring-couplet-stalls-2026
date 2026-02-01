@@ -9,6 +9,8 @@ export function buildTopicAnalysisPrompt(topic: string, wordCount: string = '7')
   const wordCountText = wordCount === '5' ? '五言' : wordCount === '7' ? '七言' : '九言';
   return `为主题"${topic}"生成${wordCountText}春联创作指导。
 
+年份信息：2026丙午马年
+
 要求：50字以内，包含主题核心、文化意象、情感基调。
 
 输出一段话。`;

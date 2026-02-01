@@ -14,6 +14,8 @@ export function buildLowerCoupletPrompt(
   const wordCountText = wordCount === '5' ? '五言' : wordCount === '7' ? '七言' : '九言';
   return `根据上联生成${wordCountText}下联。
 
+年份信息：2026丙午马年
+
 ## 上联
 ${upperCouplet}
 

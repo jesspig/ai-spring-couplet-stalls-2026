@@ -31,3 +31,8 @@ export {
   ELECTION_SYSTEM_PROMPT,
   buildElectionPrompt
 } from "./election.prompt";
+
+export {
+  HORIZONTAL_SCROLL_SYSTEM_PROMPT,
+  buildHorizontalScrollPrompt
+} from "./horizontal-scroll.prompt";
