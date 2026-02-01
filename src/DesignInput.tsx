@@ -118,6 +118,14 @@ export default function DesignInput() {
 
   return (
     <div className="design-container">
+      {/* 装饰元素 */}
+      <div className="decorations">
+        <span className="deco-item"><span>春</span></span>
+        <span className="deco-item"><span>节</span></span>
+        <span className="deco-item"><span>快</span></span>
+        <span className="deco-item"><span>乐</span></span>
+      </div>
+
       <div className="design-card">
         <div className="design-header">
           <h1 className="design-title">AI "码"年挥春小摊</h1>
@@ -241,14 +249,6 @@ export default function DesignInput() {
             开始设计
           </button>
         </div>
-      </div>
-      
-      {/* 装饰元素 */}
-      <div className="decorations">
-        <span className="deco-item"><span>春</span></span>
-        <span className="deco-item"><span>节</span></span>
-        <span className="deco-item"><span>快</span></span>
-        <span className="deco-item"><span>乐</span></span>
       </div>
     </div>
   );
