@@ -82,47 +82,36 @@ export default function SpringFestivalSVG({
   const getCoupletParams = (text: string) => {
     const charCount = text.length;
 
-    // 根据字数调整
+    // 根据字数调整 - 先确定字体和字间距，再计算红纸高度
+    // 确保文字在红纸内居中，且红纸高度随字数增加
     if (charCount <= 5) {
-      // 五言：字体稍大，间距舒适
-      const lineHeight = 64;
-      const padding = 50;
-      return {
-        fontSize: 48,
-        lineHeight,
-        padding,
-        height: charCount * lineHeight + padding * 2
-      };
+      const fontSize = 72;
+      const lineHeight = 95;
+      const textTotalHeight = (charCount - 1) * lineHeight;
+      const padding = 70; // 上下留白
+      const height = textTotalHeight + padding * 2;
+      return { fontSize, lineHeight, padding, height };
     } else if (charCount <= 7) {
-      // 七言：标准大小
-      const lineHeight = 58;
-      const padding = 45;
-      return {
-        fontSize: 44,
-        lineHeight,
-        padding,
-        height: charCount * lineHeight + padding * 2
-      };
+      const fontSize = 68;
+      const lineHeight = 85;
+      const textTotalHeight = (charCount - 1) * lineHeight;
+      const padding = 70;
+      const height = textTotalHeight + padding * 2;
+      return { fontSize, lineHeight, padding, height };
     } else if (charCount <= 9) {
-      // 九言：稍小字体
-      const lineHeight = 52;
-      const padding = 40;
-      return {
-        fontSize: 40,
-        lineHeight,
-        padding,
-        height: charCount * lineHeight + padding * 2
-      };
+      const fontSize = 64;
+      const lineHeight = 78;
+      const textTotalHeight = (charCount - 1) * lineHeight;
+      const padding = 70;
+      const height = textTotalHeight + padding * 2;
+      return { fontSize, lineHeight, padding, height };
     } else {
-      // 更多字数：进一步压缩
-      const lineHeight = 46;
-      const padding = 35;
-      return {
-        fontSize: 36,
-        lineHeight,
-        padding,
-        height: charCount * lineHeight + padding * 2
-      };
+      const fontSize = 58;
+      const lineHeight = 70;
+      const textTotalHeight = (charCount - 1) * lineHeight;
+      const padding = 70;
+      const height = textTotalHeight + padding * 2;
+      return { fontSize, lineHeight, padding, height };
     }
   };
 
@@ -153,9 +142,9 @@ export default function SpringFestivalSVG({
   const renderSpringScrolls = () => {
     if (!data.springScrolls || data.springScrolls.length === 0) return null;
 
-    const scrollWidth = 80;
-    const scrollHeight = 180;
-    const gap = 30;
+    const scrollWidth = 100;
+    const scrollHeight = 220;
+    const gap = 40;
     const totalWidth = data.springScrolls.length * scrollWidth + (data.springScrolls.length - 1) * gap;
     const startX = 600 - totalWidth / 2;
 
@@ -188,8 +177,8 @@ export default function SpringFestivalSVG({
           <text
             key={charIndex}
             x={scrollWidth / 2}
-            y={40 + charIndex * 35}
-            fontSize={24}
+            y={50 + charIndex * 45}
+            fontSize={32}
             fill={colors.gold}
             fontFamily="Noto Serif SC, serif"
             fontWeight="600"
@@ -217,11 +206,14 @@ export default function SpringFestivalSVG({
   const coupletHeight = Math.max(leftParams.height, rightParams.height);
   const maxCharCount = Math.max((leftCoupletText || '').length, (rightCoupletText || '').length);
 
-  // 根据对联高度调整福字位置和挥春位置
-  const fuYPosition = coupletHeight / 2 - 60;
-  const scrollsYPosition = 320 + coupletHeight + 40;
-  const topicYPosition = scrollsYPosition + 260;
-  const svgHeight = topicYPosition + 100;
+  // 固定 SVG 高度为 1600 (1200 * 4/3 = 1600)，保持 3:4 比例
+  const svgHeight = 1600;
+  // 福字在对联区域偏上位置
+  const fuYPosition = coupletHeight / 4 ;
+  // 挥春位置根据对联高度动态调整
+  const scrollsYPosition = 320 + coupletHeight + 60;
+  // 主题位置固定在底部，稍微上移
+  const topicYPosition = 1420;
 
   return (
     <div className="svg-container">
@@ -259,31 +251,34 @@ export default function SpringFestivalSVG({
         {/* 背景 */}
         <rect width="1200" height={svgHeight} fill={colors.paper} />
 
-        {/* 装饰性背景图案 */}
-        <g opacity="0.05">
-          {[...Array(8)].map((_, i) => (
-            <text
-              key={i}
-              x={150 + (i % 4) * 300}
-              y={200 + Math.floor(i / 4) * 900}
-              fontSize={200}
-              fill={colors.red}
-              fontFamily="Noto Serif SC, serif"
-              textAnchor="middle"
-            >
-              福
-            </text>
-          ))}
+        {/* 装饰性背景图案 - 铺满背景 */}
+        <g opacity="0.04">
+          {/* 生成多行多列福字铺满背景 */}
+          {Array.from({ length: 5 }).map((_, row) =>
+            Array.from({ length: 4 }).map((_, col) => (
+              <text
+                key={`${row}-${col}`}
+                x={150 + col * 300}
+                y={180 + row * 350}
+                fontSize={180}
+                fill={colors.red}
+                fontFamily="Noto Serif SC, serif"
+                textAnchor="middle"
+              >
+                福
+              </text>
+            ))
+          )}
         </g>
 
         {/* 横批区域 */}
-        <g transform="translate(600, 120)">
+        <g transform="translate(600, 130)">
           {/* 横批外框 */}
           <rect
             x={-250}
-            y={-50}
+            y={-60}
             width={500}
-            height={100}
+            height={120}
             fill={colors.red}
             stroke={colors.gold}
             strokeWidth={4}
@@ -293,27 +288,38 @@ export default function SpringFestivalSVG({
           {/* 横批内框 */}
           <rect
             x={-240}
-            y={-40}
+            y={-50}
             width={480}
-            height={80}
+            height={100}
             fill="none"
             stroke={colors.gold}
             strokeWidth={2}
             rx={6}
           />
           {/* 横批文字 */}
-          {renderHorizontalText(data.horizontalScroll || '', 0, 15, 48)}
+          {renderHorizontalText(data.horizontalScroll || '', 0, 18, 60)}
+          {/* 横批标签 */}
+          <text
+            x={0}
+            y={85}
+            fontSize={16}
+            fill={colors.goldDark}
+            fontFamily="Noto Sans SC, sans-serif"
+            textAnchor="middle"
+          >
+            横批
+          </text>
         </g>
 
         {/* 对联区域 */}
-        <g transform="translate(0, 280)">
+        <g transform="translate(0, 290)">
           {/* 左联 */}
-          <g transform="translate(300, 0)">
+          <g transform="translate(260, 0)">
             {/* 对联外框 */}
             <rect
-              x={-50}
+              x={-70}
               y={-20}
-              width={100}
+              width={140}
               height={leftParams.height}
               fill={colors.red}
               stroke={colors.gold}
@@ -323,9 +329,9 @@ export default function SpringFestivalSVG({
             />
             {/* 对联内框 */}
             <rect
-              x={-40}
+              x={-56}
               y={-10}
-              width={80}
+              width={112}
               height={leftParams.height - 20}
               fill="none"
               stroke={colors.gold}
@@ -348,12 +354,12 @@ export default function SpringFestivalSVG({
           </g>
 
           {/* 右联 */}
-          <g transform="translate(900, 0)">
+          <g transform="translate(940, 0)">
             {/* 对联外框 */}
             <rect
-              x={-50}
+              x={-70}
               y={-20}
-              width={100}
+              width={140}
               height={rightParams.height}
               fill={colors.red}
               stroke={colors.gold}
@@ -363,9 +369,9 @@ export default function SpringFestivalSVG({
             />
             {/* 对联内框 */}
             <rect
-              x={-40}
+              x={-56}
               y={-10}
-              width={80}
+              width={112}
               height={rightParams.height - 20}
               fill="none"
               stroke={colors.gold}
@@ -390,30 +396,30 @@ export default function SpringFestivalSVG({
           {/* 福字区域（中间） */}
           <g transform={`translate(600, ${fuYPosition})`}>
             {/* 第一个福字 */}
-            <g transform={`translate(-80, 0) rotate(${fuRotation})`}>
+            <g transform={`translate(-90, 0) rotate(${fuRotation})`}>
               <rect
-                x={-50}
-                y={-50}
-                width={100}
-                height={100}
+                x={-60}
+                y={-60}
+                width={120}
+                height={120}
                 fill={colors.red}
                 stroke={colors.gold}
                 strokeWidth={4}
                 filter="url(#shadow)"
               />
               <rect
-                x={-42}
-                y={-42}
-                width={84}
-                height={84}
+                x={-50}
+                y={-50}
+                width={100}
+                height={100}
                 fill="none"
                 stroke={colors.gold}
                 strokeWidth={2}
               />
               <text
                 x={0}
-                y={20}
-                fontSize={72}
+                y={30}
+                fontSize={88}
                 fill={colors.gold}
                 fontFamily="Noto Serif SC, serif"
                 fontWeight="700"
@@ -424,30 +430,30 @@ export default function SpringFestivalSVG({
               </text>
             </g>
             {/* 第二个福字 */}
-            <g transform={`translate(80, 0) rotate(${fuRotation})`}>
+            <g transform={`translate(90, 0) rotate(${fuRotation})`}>
               <rect
-                x={-50}
-                y={-50}
-                width={100}
-                height={100}
+                x={-60}
+                y={-60}
+                width={120}
+                height={120}
                 fill={colors.red}
                 stroke={colors.gold}
                 strokeWidth={4}
                 filter="url(#shadow)"
               />
               <rect
-                x={-42}
-                y={-42}
-                width={84}
-                height={84}
+                x={-50}
+                y={-50}
+                width={100}
+                height={100}
                 fill="none"
                 stroke={colors.gold}
                 strokeWidth={2}
               />
               <text
                 x={0}
-                y={20}
-                fontSize={72}
+                y={30}
+                fontSize={88}
                 fill={colors.gold}
                 fontFamily="Noto Serif SC, serif"
                 fontWeight="700"
@@ -474,6 +480,36 @@ export default function SpringFestivalSVG({
             textAnchor="middle"
           >
             主题：{topic || '未命名'}
+          </text>
+          <text
+            x={0}
+            y={32}
+            fontSize={16}
+            fill={colors.goldDark}
+            fontFamily="Noto Sans SC, sans-serif"
+            textAnchor="middle"
+          >
+            横批：{data.horizontalScroll || ''}
+          </text>
+          <text
+            x={0}
+            y={58}
+            fontSize={16}
+            fill={colors.goldDark}
+            fontFamily="Noto Sans SC, sans-serif"
+            textAnchor="middle"
+          >
+            上联：{data.upperCouplet || ''}
+          </text>
+          <text
+            x={0}
+            y={84}
+            fontSize={16}
+            fill={colors.goldDark}
+            fontFamily="Noto Sans SC, sans-serif"
+            textAnchor="middle"
+          >
+            下联：{data.lowerCouplet || ''}
           </text>
         </g>
       </svg>
