@@ -1,219 +1,237 @@
-# AI "码"年挥春小摊 - 项目文档
+# AI "码"年挥春小摊 - 项目说明文档
 
 ## 项目概述
 
-**AI "码"年挥春小摊**是一个基于 React + TypeScript 的现代化 Web 应用，利用大语言模型（LLM）为用户生成定制化的春联作品。该项目融合了传统文化与现代 AI 技术，为用户提供创意春联生成服务。
-
-### 核心功能
-
-- **智能春联生成**：基于用户输入的主题，生成符合平仄、对仗规则的春联
-- **三阶段工作流**：主题分析 → 春联生成 → 质量审查，确保生成质量
-- **布局自定义**：支持调整对联顺序、横批方向、福字方向等
-- **传统设计风格**：采用中文传统节日设计语言，包含优雅的配色和排版
+这是一个基于 React + TypeScript + Vite 构建的单页应用（SPA），用于使用 AI 生成个性化春节春联。用户可以输入主题、选择字数和布局配置，系统将通过 LLM API 生成上联、下联、横批和挥春，并以 SVG 格式展示和下载。
 
 ### 技术栈
 
-- **前端框架**：React 18.3.1 + TypeScript
-- **构建工具**：Vite 6.0.7
-- **路由**：React Router DOM 7.13.0
-- **样式**：原生 CSS + Google Fonts（Noto Serif TC + Noto Sans TC）
-- **设计系统**：自定义中文传统设计规范
+- **前端框架**: React 18.3.1 + TypeScript 5.9.3
+- **构建工具**: Vite 6.0.7
+- **路由**: React Router DOM 7.13.0
+- **包管理器**: Yarn (支持 PnP 模式)
+- **部署平台**: GitHub Pages
 
-## 项目结构
+### 核心功能
+
+1. **主题输入**: 用户输入自定义主题（如"马年"、"科技"、"家庭"等）
+2. **布局配置**:
+   - 字数选择（5字、7字、9字）
+   - 对联顺序（左上右下 / 右上左下）
+   - 横批方向（左到右 / 右到左）
+   - 福字方向（正贴 / 倒贴）
+3. **AI 生成**: 通过 LLM API 分步骤生成春联内容
+4. **实时进度**: 展示生成过程各步骤的状态
+5. **SVG 展示**: 以精美的 SVG 格式展示春联
+6. **图片下载**: 将 SVG 导出为 PNG 图片
+
+### 项目结构
 
 ```plaintext
 src/
 ├── components/          # React 组件
-│   ├── SettingsButton.tsx    # 设置按钮组件
-│   └── SettingsModal.tsx     # 设置弹窗组件
-├── config/             # 配置文件
-│   └── prompts/        # LLM 提示词配置
-│       ├── analysis.prompt.ts     # 主题分析提示词
-│       ├── generation.prompt.ts   # 春联生成提示词
-│       ├── review.prompt.ts       # 质量审查提示词
-│       └── election.prompt.ts     # 选举机制提示词
-├── pages/              # 页面组件
-│   ├── DisplayPage.tsx    # 显示页面
-│   ├── LoadingPage.tsx    # 加载页面
-│   └── DisplayPage.css    # 显示页面样式
-├── services/           # 服务层
-│   └── spring-workflow.service.ts  # 春联工作流服务
-├── types/              # TypeScript 类型定义
-│   ├── model.types.ts     # 模型类型
-│   └── spring.types.ts    # 春联相关类型
-├── utils/              # 工具函数
-│   └── json-parser.util.ts # JSON 解析工具
-├── App.tsx             # 根组件
-├── DesignInput.tsx     # 设计输入页面
-├── main.tsx            # 应用入口
-└── routes.tsx          # 路由配置
+│   ├── SettingsButton.tsx    # 设置按钮
+│   ├── SettingsModal.tsx     # 设置弹窗
+│   └── SpringFestivalSVG.tsx # 春联 SVG 渲染组件
+├── config/              # 配置文件
+│   └── prompts/              # LLM 提示词配置
+│       ├── analysis.prompt.ts      # 主题分析提示词
+│       ├── upper-couplet.prompt.ts # 上联生成提示词
+│       ├── lower-couplet.prompt.ts # 下联生成提示词
+│       ├── spring-scrolls.prompt.ts # 挥春生成提示词
+│       ├── horizontal-scroll.prompt.ts # 横批生成提示词
+│       ├── election.prompt.ts       # 候选选举提示词
+│       ├── format-review.prompt.ts  # 格式审查提示词
+│       └── index.ts                 # 统一导出
+├── pages/               # 页面组件
+│   ├── DesignInput.tsx         # 首页（输入页面）
+│   ├── LoadingPage.tsx         # 加载页面（生成进度）
+│   └── DisplayPage.tsx         # 展示页面（结果展示）
+├── services/            # 服务层
+│   └── spring-workflow.service.ts # 春联生成工作流服务
+├── types/               # 类型定义
+│   ├── model.types.ts         # 模型相关类型
+│   └── spring.types.ts        # 春联相关类型
+├── utils/               # 工具函数
+│   └── json-parser.util.ts    # JSON 解析工具
+├── App.tsx              # 应用根组件
+├── DesignInput.tsx      # 设计输入页面（入口）
+├── main.tsx             # 应用入口
+├── routes.tsx           # 路由配置
+└── style.css            # 全局样式
 ```
 
 ## 构建和运行
 
-### 环境要求
-
-- Node.js 18+
-- Yarn 包管理器
-
-### 开发命令
+### 开发模式
 
 ```bash
-# 安装依赖
-yarn install
-
-# 启动开发服务器
 yarn dev
-
-# 构建生产版本
-yarn build
-
-# 预览构建结果
-yarn preview
-
-# GitHub Pages 部署（构建并预览）
-yarn dev:gh
 ```
 
-### 开发服务器
+启动 Vite 开发服务器，通常在 `http://localhost:5173` 访问。
 
-开发服务器默认运行在 `http://localhost:5173`
+### 生产构建
 
-## 开发约定
+```bash
+yarn build
+```
 
-### 代码风格
+构建产物输出到 `dist/` 目录。
 
-- **函数长度**：不超过 25 行，单一职责，最大 3 层嵌套
-- **类型安全**：所有函数和方法必须有完整的 TypeScript 类型定义
-- **注释规范**：
-  - 类和方法必须使用 XML 文档注释
-  - 字段和属性必须添加行间用途说明
-  - 方法内仅复杂逻辑需添加行间注释
-- **文件命名**：使用 PascalCase 命名组件文件，camelCase 命名其他文件
+### 预览生产构建
 
-### 设计系统
+```bash
+yarn preview
+```
 
-项目遵循自定义的中文传统设计规范（详见 `design-system/ai-码年挥春小摊/MASTER.md`）：
-
-- **配色方案**：深蓝 (#0F172A) + 金色 (#CA8A04) + 浅灰 (#F8FAFC)
-- **字体**：Noto Serif TC（标题）+ Noto Sans TC（正文）
-- **间距**：基于 4px 基础单位的系统（--space-xs 到 --space-3xl）
-- **阴影**：--shadow-sm 到 --shadow-xl 五级阴影系统
-- **设计风格**：夸张极简主义（Bold Minimalism）
-
-### API 集成
-
-项目通过 `spring-workflow.service.ts` 与 LLM API 集成：
-
-- **工作流**：三阶段（分析 → 生成 → 审查）
-- **容错机制**：最大 5 次重试，失败时自动选举最优候选
-- **参数配置**：支持温度参数、最大 token 数等 LLM 参数
-- **错误分类**：格式错误、平仄不合规、对仗不工整、内容问题等
-
-### 状态管理
-
-- **SessionStorage**：存储生成数据、表单数据和用户偏好
-- **React Router**：管理页面路由和状态传递
-- **表单恢复**：支持从失败状态恢复用户输入
-
-## 部署说明
+预览生产构建版本。
 
 ### GitHub Pages 部署
 
-项目配置了 GitHub Actions 自动部署工作流：
+项目配置了 GitHub Actions 自动部署到 GitHub Pages。配置文件位于 `.github/workflows/deploy.yml`。
 
-1. 推送代码到 `main` 分支
-2. GitHub Actions 自动构建并部署到 GitHub Pages
-3. 构建产物输出到 `dist/` 目录
+- 部署路径: `/ai-spring-couplet-stalls-2026/`
+- 构建命令: `yarn build`
+- 输出目录: `dist/`
 
-### 环境配置
+## 开发规范
 
-应用需要配置以下环境变量：
+### 代码风格
 
-- `apiUrl`：LLM API 服务地址
-- `apiKey`：LLM API 访问密钥
-- `cachedModels`：本地缓存的模型列表
-- `cachedSelectedModel`：用户上次选择的模型
+- **TypeScript**: 所有代码使用 TypeScript 编写，严格类型检查
+- **函数组件**: 使用 React Hooks 和函数式组件
+- **命名约定**:
+  - 组件: PascalCase (如 `SpringFestivalSVG`)
+  - 函数/变量: camelCase (如 `handleDownload`)
+  - 类型/接口: PascalCase (如 `SpringFestivalData`)
+  - 常量: UPPER_SNAKE_CASE (如 `TOPIC_ANALYSIS_SYSTEM_PROMPT`)
 
-## 关键文件说明
+### 文件组织
 
-### 1. `src/services/spring-workflow.service.ts`
+- 每个组件配套一个 CSS 文件（如 `SpringFestivalSVG.tsx` + `SpringFestivalSVG.css`）
+- 类型定义集中放在 `types/` 目录
+- 提示词配置放在 `config/prompts/` 目录
+- 业务逻辑封装在 `services/` 的服务类中
 
-春联生成的核心服务，实现三阶段工作流：
+### 状态管理
 
-- **analyzeTopic()**：主题分析和结构化提示词生成
-- **generateSpringFestival()**：基于分析结果生成春联
-- **reviewSpringFestival()**：质量审查和错误检测
-- **executeWorkflow()**：完整的三阶段工作流执行
+- 使用 React 内置 `useState`、`useEffect` 管理本地状态
+- 使用 `localStorage` 持久化用户配置（API 配置、模型选择等）
+- 使用 `sessionStorage` 临时存储生成流程数据（主题、生成的春联内容等）
+- 使用 React Router 的 `location.state` 传递页面间数据
 
-### 2. `src/config/prompts/`
+### 工作流服务
 
-包含所有 LLM 提示词的配置文件：
+`SpringWorkflowService` 类负责春联生成的核心工作流：
 
-- **analysis.prompt.ts**：主题分析系统提示词
-- **generation.prompt.ts**：春联生成系统提示词
-- **review.prompt.ts**：质量审查系统提示词
-- **election.prompt.ts**：候选选举系统提示词
+1. **主题分析**: 分析主题内涵，提取关键元素
+2. **上联生成**: 创作上联，奠定基调
+3. **下联生成**: 对仗下联，呼应上联
+4. **挥春生成**: 创作四字挥春
+5. **横批生成**: 点睛横批，统揽全联
+6. **候选选举**: 当多次尝试失败时，从历史候选中选择最佳结果
 
-### 3. `src/types/spring.types.ts`
+工作流特性：
 
-定义所有类型安全的接口：
+- 最多重试 5 次
+- 实时进度回调
+- 支持中止操作
+- 字数验证（严格）
+- 进度事件系统
 
-- **TopicAnalysisResult**：主题分析结果结构
-- **SpringFestivalResponse**：春联生成响应结构
-- **WorkflowResponse**：完整工作流响应结构
-- **ReviewResult**：审查结果结构
+### 配置要求
 
-### 4. `design-system/ai-码年挥春小摊/MASTER.md`
+用户需要在设置中配置以下信息才能使用：
 
-设计系统主文件，定义：
+- **API URL**: LLM 服务的 API 地址
+- **API Key**: 访问密钥
+- **模型**: 选择可用的 LLM 模型
 
-- 配色方案和 CSS 变量
-- 字体规范和 Google Fonts 引用
-- 间距系统和阴影规范
-- 组件规范（按钮、卡片、输入框、模态框）
-- 设计风格和最佳实践
-- 禁止使用的模式和反模式
+配置保存在 `localStorage` 中，模型列表会缓存到本地以减少 API 调用。
 
-## 使用指南
+### 路由结构
 
-### 用户操作流程
+- `/`: 设计输入页面
+- `/loading`: 生成进度页面
+- `/display`: 结果展示页面
 
-1. **输入主题**：在 `DesignInput` 页面输入主题（如"马年"、"科技"等）
-2. **选择配置**：
-   - 字数：5字、7字或9字
-   - 对联顺序：左上右下或右上左下
-   - 横批方向：左到右或右到左
-   - 福字方向：正贴或倒贴
-3. **选择模型**：从下拉菜单选择可用的 LLM 模型
-4. **开始生成**：点击"开始设计"进入加载页面
-5. **查看结果**：在显示页面查看生成的春联和挥春
-6. **自定义调整**：在显示页面调整布局设置
-7. **重新生成**：点击"再写一副"回到输入页面
+所有路由使用 `basename` 配置以支持 GitHub Pages 部署。
 
-### 设置配置
+### 浏览器兼容性
 
-点击右上角的设置按钮可以：
+- 使用现代浏览器 API（ES6+）
+- 依赖 SVG、Canvas 等现代特性
+- 建议使用最新版 Chrome、Edge、Firefox、Safari
 
-- 更新可用的 LLM 模型列表
-- 配置 API 服务地址和密钥
-- 清除缓存数据
+### 提示词工程
 
-## 注意事项
+提示词位于 `src/config/prompts/` 目录，按功能模块分离：
 
-1. **API 配置**：首次使用前必须在设置中配置 LLM API 服务
-2. **字数限制**：建议使用 5、7、9 字的春联，更易生成符合平仄规则的作品
-3. **主题质量**：提供清晰、具体的主题描述有助于生成更好的春联
-4. **浏览器兼容性**：项目使用现代 CSS 特性，建议使用最新版本的 Chrome、Firefox、Safari 等现代浏览器
+- 每个提示词文件包含系统提示词和用户提示词构建函数
+- 使用 TypeScript 类型确保提示词参数正确
+- 支持动态插入变量（主题、字数、分析结果等）
 
-## 开发建议
+### 错误处理
 
-1. **新增功能**：遵循现有的设计系统和代码风格
-2. **错误处理**：在 `spring-workflow.service.ts` 中添加新的错误分类
-3. **提示词优化**：在 `src/config/prompts/` 中修改提示词时，先备份原版本
-4. **测试**：使用 React Testing Library 或 Cypress 进行组件测试
-5. **性能优化**：对于大型组件，考虑使用 React.memo 或 useMemo 优化性能
+- 网络请求失败时显示友好的错误提示
+- 生成失败时允许返回首页重试
+- 使用 TypeScript 类型确保错误信息的安全传递
+- 关键操作（如 API 调用）包含 try-catch 保护
 
-## 许可证
+### 性能优化
 
-本项目采用 MIT 许可证，详见项目根目录的 LICENSE 文件。
+- 使用 Vite 的优化依赖预构建功能
+- 模型列表缓存减少重复 API 调用
+- 组件按需加载（通过 React Router 的路由分割）
+- 使用 React.memo 和 useCallback 减少不必要的重渲染
+
+### Git 提交规范
+
+项目使用 Conventional Commits 规范（虽然未强制执行）：
+
+- `feat:` 新功能
+- `fix:` 修复 bug
+- `docs:` 文档更新
+- `style:` 代码格式调整
+- `refactor:` 代码重构
+- `test:` 测试相关
+- `chore:` 构建/工具相关
+
+### 代码审查要点
+
+在修改代码时，请确保：
+
+1. TypeScript 类型定义完整，无 `any` 类型
+2. 函数添加 JSDoc 注释说明参数和返回值
+3. 遵循现有代码风格和命名约定
+4. 测试关键路径（特别是 API 调用和状态管理）
+5. 运行 `yarn build` 确保无编译错误
+6. 检查控制台是否有警告或错误
+
+## 常见问题
+
+### Q: 如何更换 LLM 提供商？
+
+A: 在设置中修改 "API URL" 和 "API Key"，确保格式兼容 OpenAI API 标准。
+
+### Q: 为什么生成失败？
+
+A: 可能原因：
+
+- API 配置错误
+- 网络连接问题
+- 模型不支持
+- 主题过于复杂导致多次重试失败
+
+### Q: 如何自定义提示词？
+
+A: 修改 `src/config/prompts/` 目录下的提示词文件，无需重新构建应用。
+
+### Q: SVG 图片如何自定义样式？
+
+A: 修改 `src/components/SpringFestivalSVG.tsx` 中的颜色配置和渲染逻辑。
+
+### Q: 如何添加新的字数选项？
+
+A: 修改 `src/pages/DesignInput.tsx` 的字数选项，并在 `SpringFestivalSVG.tsx` 中添加相应的自适应参数计算逻辑。
