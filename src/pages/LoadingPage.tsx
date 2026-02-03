@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { SpringWorkflowService } from '../services/spring-workflow.service';
-import type { ProgressEvent, ProgressEventType } from '../types/spring.types';
+import { historyDB } from '../services/history-db.service';
+import type { ProgressEvent, ProgressEventType, GenerationRecord, WorkflowStep } from '../types/spring.types';
 import './LoadingPage.css';
 
 /**
@@ -79,6 +80,7 @@ function getStepStatusClass(status: UIStepStatus): string {
 
 export default function LoadingPage() {
   const navigate = useNavigate();
+  const { uuid } = useParams<{ uuid?: string }>();
   const [topic, setTopic] = useState('');
   const [error, setError] = useState('');
   const [steps, setSteps] = useState<UIStep[]>([]);
@@ -86,8 +88,10 @@ export default function LoadingPage() {
   const [isAborted, setIsAborted] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const stepIdCounterRef = useRef(0);
   const workflowServiceRef = useRef<SpringWorkflowService | null>(null);
+  const hasLoadedHistoryRef = useRef(false);
 
   // 生成唯一步骤ID
   const generateStepId = useCallback(() => {
@@ -119,8 +123,8 @@ export default function LoadingPage() {
 
   // 跳转到展示页面
   const handleViewResult = useCallback(() => {
-    navigate('/display');
-  }, [navigate]);
+    navigate(uuid ? `/display/${uuid}` : '/display');
+  }, [navigate, uuid]);
 
   // 返回首页
   const handleBackToHome = useCallback(() => {
@@ -203,85 +207,154 @@ export default function LoadingPage() {
   }, [generateStepId]);
 
   useEffect(() => {
-    const storedTopic = sessionStorage.getItem('topic');
-    const selectedModel = sessionStorage.getItem('selectedModel');
-    const wordCount = sessionStorage.getItem('wordCount') || '7';
-    const coupletOrder = sessionStorage.getItem('coupletOrder') || 'leftUpper';
-    const horizontalDirection = sessionStorage.getItem('horizontalDirection') || 'leftToRight';
-    const fuOrientation = sessionStorage.getItem('fuOrientation') || 'upright';
-
-    if (!storedTopic || !selectedModel) {
-      navigate('/');
-      return;
-    }
-
-    setTopic(storedTopic);
-
-    const generateSpringFestival = async () => {
-      const apiUrl = localStorage.getItem('apiUrl') || '';
-      const apiKey = localStorage.getItem('apiKey') || '';
-
-      if (!apiUrl || !apiKey) {
-        const message = '请先在设置中配置 API';
-        setError(message);
-        setIsFailed(true);
-        return;
-      }
-
+    const loadFromHistory = async (recordId: string): Promise<boolean> => {
       try {
-        console.log('\n=== 开始春联生成工作流 ===');
-        console.log(`主题：${storedTopic}`);
-        console.log(`字数：${wordCount}字`);
-
-        const workflowService = new SpringWorkflowService(apiUrl, apiKey, selectedModel);
-        workflowServiceRef.current = workflowService;
-
-        // 设置进度回调
-        workflowService.setProgressCallback(handleProgressEvent);
-
-        const formData = {
-          coupletOrder: (coupletOrder === 'leftUpper' ? 'upper-lower' : 'lower-upper') as 'upper-lower' | 'lower-upper',
-          horizontalDirection: (horizontalDirection === 'leftToRight' ? 'left-right' : 'right-left') as 'left-right' | 'right-left',
-          fuDirection: (fuOrientation === 'upright' ? 'upright' : 'rotated') as 'upright' | 'rotated'
-        };
-
-        const result = await workflowService.executeWorkflow(storedTopic, wordCount, false, formData);
-
-        // 检查是否被中止
-        if (result.aborted) {
-          setIsAborted(true);
-          setError('生成已中止');
-          return;
+        setLoadingHistory(true);
+        const record = await historyDB.getRecord(recordId);
+        
+        if (!record) {
+          // 找不到记录，返回 false 表示需要开始新生成
+          return false;
         }
 
-        // 检查是否需要回退到首页
-        if (result.shouldReturnToHome && !result.upperCouplet) {
-          console.log('\n=== 回退到首页 ===');
-          console.log('原因：', result.errorMessage);
-          setError(result.errorMessage || '生成失败');
+        setTopic(record.topic);
+        
+        // 转换历史步骤为 UI 步骤
+        const uiSteps = record.steps.map((step: WorkflowStep) => ({
+          id: step.id,
+          name: step.name,
+          description: step.description,
+          status: step.status,
+          output: step.output,
+          error: step.error,
+          isRetry: false
+        }));
+        
+        setSteps(uiSteps);
+        
+        // 根据记录状态设置页面状态
+        if (record.status === 'completed') {
+          setIsCompleted(true);
+          if (record.result) {
+            sessionStorage.setItem('generatedData', JSON.stringify(record.result));
+          }
+        } else if (record.status === 'failed') {
           setIsFailed(true);
-          return;
+          setError(record.error || '生成失败');
+        } else if (record.status === 'aborted') {
+          setIsAborted(true);
+          setError(record.error || '生成已中止');
         }
-
-        sessionStorage.setItem('generatedData', JSON.stringify(result));
-
-        console.log('\n=== 春联生成成功 ===');
-        setIsCompleted(true);
-
+        // 'pending' 状态不处理，保持初始状态
+        
+        return true; // 成功加载历史记录
       } catch (err) {
-        const message = err instanceof Error ? err.message : '生成失败，请重试';
-        if (message === 'WORKFLOW_ABORTED') {
-          setIsAborted(true);
-          setError('生成已中止');
-        } else {
-          setError(message);
-          setIsFailed(true);
-          console.error('春联生成失败：', message);
-        }
+        console.error('加载历史记录失败:', err);
+        return false; // 出错，返回 false 表示需要开始新生成
+      } finally {
+        setLoadingHistory(false);
+        hasLoadedHistoryRef.current = true;
       }
     };
 
-    generateSpringFestival();
+    const startNewGeneration = async () => {
+      const storedTopic = sessionStorage.getItem('topic');
+      const selectedModel = sessionStorage.getItem('selectedModel');
+      const recordId = sessionStorage.getItem('recordId');
+      const wordCount = sessionStorage.getItem('wordCount') || '7';
+      const coupletOrder = sessionStorage.getItem('coupletOrder') || 'leftUpper';
+      const horizontalDirection = sessionStorage.getItem('horizontalDirection') || 'leftToRight';
+      const fuOrientation = sessionStorage.getItem('fuOrientation') || 'upright';
+
+      if (!storedTopic || !selectedModel) {
+        navigate('/');
+        return;
+      }
+
+      setTopic(storedTopic);
+
+      const generateSpringFestival = async () => {
+        const apiUrl = localStorage.getItem('apiUrl') || '';
+        const apiKey = localStorage.getItem('apiKey') || '';
+
+        if (!apiUrl || !apiKey) {
+          const message = '请先在设置中配置 API';
+          setError(message);
+          setIsFailed(true);
+          return;
+        }
+
+        try {
+          console.log('\n=== 开始春联生成工作流 ===');
+          console.log(`主题：${storedTopic}`);
+          console.log(`字数：${wordCount}字`);
+
+          const workflowService = new SpringWorkflowService(apiUrl, apiKey, selectedModel, recordId || undefined);
+          workflowServiceRef.current = workflowService;
+
+          // 设置进度回调
+          workflowService.setProgressCallback(handleProgressEvent);
+
+          const formData = {
+            coupletOrder: (coupletOrder === 'leftUpper' ? 'upper-lower' : 'lower-upper') as 'upper-lower' | 'lower-upper',
+            horizontalDirection: (horizontalDirection === 'leftToRight' ? 'left-right' : 'right-left') as 'left-right' | 'right-left',
+            fuDirection: (fuOrientation === 'upright' ? 'upright' : 'rotated') as 'upright' | 'rotated'
+          };
+
+          const result = await workflowService.executeWorkflow(storedTopic, wordCount, false, formData);
+
+          // 检查是否被中止
+          if (result.aborted) {
+            setIsAborted(true);
+            setError('生成已中止');
+            return;
+          }
+
+          // 检查是否需要回退到首页
+          if (result.shouldReturnToHome && !result.upperCouplet) {
+            console.log('\n=== 回退到首页 ===');
+            console.log('原因：', result.errorMessage);
+            setError(result.errorMessage || '生成失败');
+            setIsFailed(true);
+            return;
+          }
+
+          sessionStorage.setItem('generatedData', JSON.stringify(result));
+
+          console.log('\n=== 春联生成成功 ===');
+          setIsCompleted(true);
+
+        } catch (err) {
+          const message = err instanceof Error ? err.message : '生成失败，请重试';
+          if (message === 'WORKFLOW_ABORTED') {
+            setIsAborted(true);
+            setError('生成已中止');
+          } else {
+            setError(message);
+            setIsFailed(true);
+            console.error('春联生成失败：', message);
+          }
+        }
+      };
+
+      generateSpringFestival();
+    };
+
+    const initPage = async () => {
+      // 如果有 UUID，尝试从历史记录加载
+      if (uuid && !hasLoadedHistoryRef.current) {
+        const loaded = await loadFromHistory(uuid);
+        // 如果找不到历史记录（新生成），则开始生成
+        if (!loaded) {
+          startNewGeneration();
+        }
+      } else if (!uuid) {
+        // 没有 UUID，开始新生成
+        startNewGeneration();
+      }
+    };
+
+    initPage();
 
     return () => {
       // 清理：如果组件卸载时工作流仍在运行，中止它
@@ -289,7 +362,7 @@ export default function LoadingPage() {
         workflowServiceRef.current.abort();
       }
     };
-  }, [navigate, handleProgressEvent]);
+  }, [navigate, handleProgressEvent, uuid]);
 
   // 计算进度百分比
   const progressPercent = steps.length > 0

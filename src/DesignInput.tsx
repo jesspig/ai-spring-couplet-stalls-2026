@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SettingsButton from './components/SettingsButton';
+import HistoryModal from './components/HistoryModal';
 import type { Model, ModelsResponse } from './types/model.types';
 import type { FormData } from './types/spring.types';
+import { generateUUID } from './utils/uuid.util';
 import './DesignInput.css';
 
 export default function DesignInput() {
@@ -15,6 +17,7 @@ export default function DesignInput() {
   const [error, setError] = useState(false);
   const [errorType, setErrorType] = useState<'unconfigured' | 'fetchFailed' | null>(null);
   const [returnError, setReturnError] = useState<string | null>(null);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
 
   const [wordCount, setWordCount] = useState('5');
   const [coupletOrder, setCoupletOrder] = useState('rightUpper');
@@ -144,14 +147,17 @@ export default function DesignInput() {
       return;
     }
 
+    const uuid = generateUUID();
+
     sessionStorage.setItem('topic', topic.trim());
     sessionStorage.setItem('selectedModel', selectedModel);
     sessionStorage.setItem('wordCount', wordCount);
     sessionStorage.setItem('coupletOrder', coupletOrder);
     sessionStorage.setItem('horizontalDirection', horizontalDirection);
     sessionStorage.setItem('fuOrientation', fuOrientation);
+    sessionStorage.setItem('recordId', uuid);
 
-    navigate('/loading');
+    navigate(`/loading/${uuid}`);
   };
 
   return (
@@ -167,7 +173,19 @@ export default function DesignInput() {
       <div className="design-card">
         <div className="design-header">
           <h1 className="design-title">AI "码"年挥春小摊</h1>
-          <SettingsButton onModelsUpdate={handleModelsUpdate} />
+          <div className="header-actions">
+            <button
+              className="history-button"
+              onClick={() => setHistoryModalOpen(true)}
+              aria-label="查看历史记录"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </button>
+            <SettingsButton onModelsUpdate={handleModelsUpdate} />
+          </div>
         </div>
 
         {returnError && (
@@ -304,6 +322,12 @@ export default function DesignInput() {
           </button>
         </div>
       </div>
+
+      {/* 历史记录模态框 */}
+      <HistoryModal
+        isOpen={historyModalOpen}
+        onClose={() => setHistoryModalOpen(false)}
+      />
     </div>
   );
 }

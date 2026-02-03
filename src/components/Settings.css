@@ -7,17 +7,18 @@
   height: 40px;
   padding: 0;
   background: transparent;
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-gold);
   border-radius: 8px;
   cursor: pointer;
-  color: #666;
-  transition: all 0.2s;
+  color: var(--color-primary);
+  transition: all 0.3s ease;
 }
 
 .settings-button:hover {
-  background: #f5f5f5;
-  border-color: #646cff;
-  color: #646cff;
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
 }
 
 /* 头部容器样式 */
@@ -33,11 +34,6 @@
 
 .design-header .design-title {
   margin-bottom: 0;
-}
-
-.design-header .settings-button {
-  position: absolute;
-  right: 0;
 }
 
 /* 弹窗遮罩层 */
@@ -56,14 +52,18 @@
 
 /* 弹窗容器 */
 .settings-modal {
-  background: white;
-  border-radius: 12px;
+  position: relative;
+  background: var(--color-paper);
+  border: 3px solid var(--color-gold);
+  border-radius: 16px;
   width: 90%;
   max-width: 480px;
   max-height: 90vh;
   overflow: hidden;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: modalSlideIn 0.2s ease-out;
+  box-shadow: 
+    0 0 0 1px var(--color-primary),
+    0 8px 32px rgba(220, 38, 38, 0.15);
+  animation: modalSlideIn 0.3s ease-out;
 }
 
 @keyframes modalSlideIn {
@@ -83,14 +83,16 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 24px;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 2px solid var(--color-gold);
+  background: linear-gradient(135deg, var(--color-bg) 0%, var(--color-primary-light) 100%);
 }
 
 .settings-modal-header h2 {
   margin: 0;
   font-size: 1.25rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
+  font-family: 'Noto Serif SC', serif;
 }
 
 .settings-modal-close {
@@ -100,17 +102,18 @@
   align-items: center;
   justify-content: center;
   background: transparent;
-  border: none;
+  border: 1px solid var(--color-gold);
   border-radius: 6px;
   font-size: 24px;
-  color: #666;
+  color: var(--color-primary);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
 }
 
 .settings-modal-close:hover {
-  background: #f5f5f5;
-  color: #333;
+  background: var(--color-primary);
+  color: white;
+  border-color: var(--color-primary);
 }
 
 /* 弹窗内容 */
@@ -118,6 +121,7 @@
   padding: 24px;
   overflow-y: auto;
   max-height: 60vh;
+  background: var(--color-paper);
 }
 
 /* 表单组 */
@@ -130,33 +134,36 @@
   margin-bottom: 8px;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text);
 }
 
 .settings-form-group input {
   width: 100%;
   padding: 10px 14px;
   font-size: 14px;
-  border: 1px solid #d0d0d0;
+  border: 2px solid var(--color-gold);
   border-radius: 8px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: all 0.3s ease;
   box-sizing: border-box;
+  background: white;
+  color: var(--color-text);
 }
 
 .settings-form-group input:focus {
-  border-color: #646cff;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-light);
 }
 
 .settings-form-group input::placeholder {
-  color: #aaa;
+  color: var(--color-text-light);
 }
 
 /* 测试区域 */
 .settings-test-section {
   margin-top: 24px;
   padding-top: 24px;
-  border-top: 1px solid #e0e0e0;
+  border-top: 2px solid var(--color-gold);
 }
 
 .settings-test-button {
@@ -164,17 +171,19 @@
   padding: 12px 20px;
   font-size: 14px;
   font-weight: 500;
-  color: #646cff;
-  background: #f0f0ff;
-  border: 1px solid #646cff;
+  color: var(--color-primary);
+  background: var(--color-primary-light);
+  border: 2px solid var(--color-primary);
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  font-family: 'Noto Sans SC', sans-serif;
 }
 
 .settings-test-button:hover:not(:disabled) {
-  background: #646cff;
+  background: var(--color-primary);
   color: white;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
 }
 
 .settings-test-button:disabled {
@@ -191,22 +200,23 @@
 }
 
 .settings-test-message.success {
-  background: #f0f9f0;
-  color: #2e7d32;
-  border: 1px solid #c8e6c9;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  border: 1px solid var(--color-gold);
 }
 
 .settings-test-message.error {
-  background: #fef0f0;
-  color: #c62828;
-  border: 1px solid #ffcdd2;
+  background: var(--color-primary-light);
+  color: var(--color-primary-dark);
+  border: 1px solid var(--color-primary);
 }
 
 /* 模型列表 */
 .settings-models-list {
   margin-top: 16px;
   padding: 16px;
-  background: #f8f9fa;
+  background: var(--color-bg);
+  border: 2px solid var(--color-gold);
   border-radius: 8px;
 }
 
@@ -214,14 +224,14 @@
   margin: 0 0 12px 0;
   font-size: 14px;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text);
 }
 
 .settings-models-list ul {
   margin: 0;
   padding-left: 20px;
   font-size: 13px;
-  color: #555;
+  color: var(--color-text-light);
   max-height: 150px;
   overflow-y: auto;
 }
@@ -237,8 +247,8 @@
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
-  border-top: 1px solid #e0e0e0;
-  background: #fafafa;
+  border-top: 2px solid var(--color-gold);
+  background: var(--color-bg);
 }
 
 .settings-button-secondary,
@@ -248,29 +258,31 @@
   font-weight: 500;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.3s ease;
+  font-family: 'Noto Sans SC', sans-serif;
 }
 
 .settings-button-secondary {
-  color: #666;
+  color: var(--color-text);
   background: white;
-  border: 1px solid #d0d0d0;
+  border: 2px solid var(--color-gold);
 }
 
 .settings-button-secondary:hover {
-  background: #f5f5f5;
-  border-color: #bbb;
+  background: var(--color-bg);
+  border-color: var(--color-primary);
 }
 
 .settings-button-primary {
   color: white;
-  background: #646cff;
-  border: 1px solid #646cff;
+  background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+  border: 2px solid var(--color-primary);
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.4);
 }
 
 .settings-button-primary:hover {
-  background: #535bf2;
-  border-color: #535bf2;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(220, 38, 38, 0.5);
 }
 
 /* 响应式设计 */

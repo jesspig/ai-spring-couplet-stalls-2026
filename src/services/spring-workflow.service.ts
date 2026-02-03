@@ -18,7 +18,8 @@ import type {
   WorkflowResponse,
   GenerationHistory,
   ProgressCallback,
-  ProgressEvent
+  ProgressEvent,
+  WorkflowStep
 } from "../types/spring.types";
 
 interface LLMConfig {
@@ -41,13 +42,15 @@ export class SpringWorkflowService {
   private config: LLMConfig;
   private abortController: AbortController | null = null;
   private progressCallback: ProgressCallback | null = null;
+  private recordId: string | null = null;
 
-  constructor(baseUrl: string, apiKey: string, model: string) {
+  constructor(baseUrl: string, apiKey: string, model: string, recordId?: string) {
     this.config = {
       baseUrl: baseUrl.replace(/\/$/, ""),
       apiKey,
       model
     };
+    this.recordId = recordId || null;
   }
 
   /**
@@ -64,6 +67,63 @@ export class SpringWorkflowService {
     if (this.progressCallback) {
       this.progressCallback(event);
     }
+
+    // 同步到 IndexedDB（异步操作，不阻塞主流程）
+    if (this.recordId) {
+      this.syncStepToDB(event);
+    }
+  }
+
+  /**
+   * 同步步骤到 IndexedDB
+   */
+  private async syncStepToDB(event: ProgressEvent): Promise<void> {
+    if (!this.recordId) return;
+
+    try {
+      const { historyDB } = await import('./history-db.service');
+
+      // 创建 WorkflowStep 对象
+      const step: WorkflowStep = {
+        id: `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        name: event.stepName,
+        description: event.stepDescription,
+        status: this.getStatusFromEventType(event.type),
+        output: event.output,
+        error: event.error,
+        startTime: event.timestamp,
+        endTime: this.isCompleteEventType(event.type) ? event.timestamp : undefined
+      };
+
+      await historyDB.addStep(this.recordId, step);
+    } catch (error) {
+      console.error('同步步骤到 IndexedDB 失败:', error);
+    }
+  }
+
+  /**
+   * 从事件类型获取状态
+   */
+  private getStatusFromEventType(eventType: ProgressEventType): 'pending' | 'running' | 'completed' | 'failed' {
+    if (eventType.includes('_start')) {
+      return 'running';
+    }
+    if (eventType.includes('_complete')) {
+      return 'completed';
+    }
+    if (eventType.includes('_failed')) {
+      return 'failed';
+    }
+    return 'pending';
+  }
+
+  /**
+   * 判断是否是完成类型的事件
+   */
+  private isCompleteEventType(eventType: ProgressEventType): boolean {
+    return eventType.includes('_complete') || eventType.includes('_failed') || 
+           eventType === 'workflow_complete' || eventType === 'workflow_failed' || 
+           eventType === 'workflow_aborted';
   }
 
   /**
@@ -100,6 +160,27 @@ export class SpringWorkflowService {
     console.log(`主题：${topic}`);
     console.log(`字数：${wordCount}字`);
     console.log(`最大尝试次数：${maxAttempts}`);
+
+    // 如果有 recordId，初始化 IndexedDB 并创建记录
+    if (this.recordId) {
+      try {
+        const { historyDB } = await import('./history-db.service');
+        await historyDB.init();
+        await historyDB.createRecord(
+          this.recordId,
+          topic,
+          wordCount,
+          formData || {
+            coupletOrder: 'upper-lower',
+            horizontalDirection: 'left-right',
+            fuDirection: 'upright'
+          }
+        );
+        console.log(`✓ 已创建生成记录: ${this.recordId}`);
+      } catch (error) {
+        console.error('创建 IndexedDB 记录失败:', error);
+      }
+    }
 
     try {
       this.checkAborted();
@@ -313,6 +394,17 @@ export class SpringWorkflowService {
           errorMessage: '未能生成符合要求的春联，请调整主题后重试。'
         };
 
+        // 更新 IndexedDB 记录状态为失败
+        if (this.recordId) {
+          try {
+            const { historyDB } = await import('./history-db.service');
+            await historyDB.updateRecordStatus(this.recordId, 'failed', undefined, result.errorMessage);
+            console.log(`✓ 已更新生成记录状态: failed`);
+          } catch (error) {
+            console.error('更新 IndexedDB 记录失败:', error);
+          }
+        }
+
         return result;
       }
 
@@ -447,6 +539,17 @@ export class SpringWorkflowService {
         result.analysis = analysis;
       }
 
+      // 更新 IndexedDB 记录状态为已完成
+      if (this.recordId) {
+        try {
+          const { historyDB } = await import('./history-db.service');
+          await historyDB.updateRecordStatus(this.recordId, 'completed', result);
+          console.log(`✓ 已更新生成记录状态: completed`);
+        } catch (error) {
+          console.error('更新 IndexedDB 记录失败:', error);
+        }
+      }
+
       return result;
 
     } catch (error) {
@@ -459,7 +562,7 @@ export class SpringWorkflowService {
           stepDescription: '用户手动中止生成'
         });
         
-        return {
+        const abortedResult = {
           upperCouplet: '',
           lowerCouplet: '',
           horizontalScroll: '',
@@ -475,6 +578,19 @@ export class SpringWorkflowService {
           },
           errorMessage: '生成已中止'
         };
+
+        // 更新 IndexedDB 记录状态为中止
+        if (this.recordId) {
+          try {
+            const { historyDB } = await import('./history-db.service');
+            await historyDB.updateRecordStatus(this.recordId, 'aborted', undefined, abortedResult.errorMessage);
+            console.log(`✓ 已更新生成记录状态: aborted`);
+          } catch (error) {
+            console.error('更新 IndexedDB 记录失败:', error);
+          }
+        }
+
+        return abortedResult;
       }
       throw error;
     }

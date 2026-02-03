@@ -173,3 +173,32 @@ export interface WorkflowResponse extends SpringFestivalResponse {
   /** 是否被中止 */
   aborted?: boolean;
 }
+
+/**
+ * 生成记录状态
+ */
+export type GenerationStatus = 'pending' | 'completed' | 'failed' | 'aborted';
+
+/**
+ * 生成记录
+ */
+export interface GenerationRecord {
+  /** 唯一标识符 (UUID) */
+  id: string;
+  /** 创建时间戳 */
+  createdAt: number;
+  /** 主题 */
+  topic: string;
+  /** 字数 */
+  wordCount: string;
+  /** 表单配置 */
+  formData: FormData;
+  /** 生成状态 */
+  status: GenerationStatus;
+  /** 生成步骤 */
+  steps: WorkflowStep[];
+  /** 生成结果（成功时） */
+  result?: WorkflowResponse;
+  /** 错误信息（失败时） */
+  error?: string;
+}

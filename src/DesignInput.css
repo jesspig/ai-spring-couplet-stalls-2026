@@ -47,6 +47,34 @@
   text-shadow: 2px 2px 0 var(--color-gold-light);
 }
 
+.header-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.history-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid var(--color-gold);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--color-primary);
+  transition: all 0.3s ease;
+}
+
+.history-button:hover {
+  background: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+}
+
 .design-subtitle {
   font-size: 1rem;
   color: var(--color-text-light);

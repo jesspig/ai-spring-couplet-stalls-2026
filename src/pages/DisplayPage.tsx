@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import SpringFestivalSVG from '../components/SpringFestivalSVG';
+import { historyDB } from '../services/history-db.service';
+import type { GenerationRecord } from '../types/spring.types';
 import './DisplayPage.css';
 
 export interface SpringFestivalData {
@@ -12,18 +14,64 @@ export interface SpringFestivalData {
 
 export default function DisplayPage() {
   const navigate = useNavigate();
+  const { uuid } = useParams<{ uuid?: string }>();
+  const [data, setData] = useState<SpringFestivalData>({ upperCouplet: '', lowerCouplet: '', horizontalScroll: '', springScrolls: [] });
+  const [topic, setTopic] = useState('');
+  const [isFailed, setIsFailed] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedData = sessionStorage.getItem('generatedData');
-    const storedTopic = sessionStorage.getItem('topic');
+    const loadFromHistory = async (recordId: string) => {
+      try {
+        const record = await historyDB.getRecord(recordId);
+        
+        if (!record) {
+          navigate('/');
+          return;
+        }
 
-    if (!storedData || !storedTopic) {
-      navigate('/');
+        setTopic(record.topic);
+
+        if (record.status === 'completed' && record.result) {
+          setData({
+            upperCouplet: record.result.upperCouplet,
+            lowerCouplet: record.result.lowerCouplet,
+            horizontalScroll: record.result.horizontalScroll,
+            springScrolls: record.result.springScrolls
+          });
+        } else if (record.status === 'failed' || record.status === 'aborted') {
+          setIsFailed(true);
+          setErrorMessage(record.error || '生成失败');
+        }
+      } catch (err) {
+        console.error('加载历史记录失败:', err);
+        navigate('/');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    const loadFromSession = () => {
+      const storedData = sessionStorage.getItem('generatedData');
+      const storedTopic = sessionStorage.getItem('topic');
+
+      if (!storedData || !storedTopic) {
+        navigate('/');
+        return;
+      }
+
+      setData(JSON.parse(storedData));
+      setTopic(storedTopic);
+      setLoading(false);
+    };
+
+    if (uuid) {
+      loadFromHistory(uuid);
+    } else {
+      loadFromSession();
     }
-  }, [navigate]);
-
-  const data: SpringFestivalData = JSON.parse(sessionStorage.getItem('generatedData') || '{}');
-  const topic = sessionStorage.getItem('topic') || '';
+  }, [navigate, uuid]);
 
   // 使用状态管理控制面板选项，初始值从 sessionStorage 读取
   const [coupletOrder, setCoupletOrder] = useState(sessionStorage.getItem('coupletOrder') || 'leftUpper');
@@ -54,15 +102,27 @@ export default function DisplayPage() {
 
     // 构建表单数据用于回退时恢复
     const formData = {
-      topic: sessionStorage.getItem('topic') || '',
+      topic: topic || sessionStorage.getItem('topic') || '',
       wordCount: sessionStorage.getItem('wordCount') || '7',
-      coupletOrder: (sessionStorage.getItem('coupletOrder') === 'leftUpper' ? 'upper-lower' : 'lower-upper') as 'upper-lower' | 'lower-upper',
-      horizontalDirection: (sessionStorage.getItem('horizontalDirection') === 'leftToRight' ? 'left-right' : 'right-left') as 'left-right' | 'right-left',
-      fuDirection: (sessionStorage.getItem('fuOrientation') === 'upright' ? 'upright' : 'rotated') as 'upright' | 'rotated'
+      coupletOrder: (coupletOrder === 'leftUpper' ? 'upper-lower' : 'lower-upper') as 'upper-lower' | 'lower-upper',
+      horizontalDirection: (horizontalDirection === 'leftToRight' ? 'left-right' : 'right-left') as 'left-right' | 'right-left',
+      fuDirection: (fuOrientation === 'upright' ? 'upright' : 'rotated') as 'upright' | 'rotated'
     };
 
     navigate('/', { state: { formData } });
   };
+
+  const handleViewSteps = () => {
+    if (uuid) {
+      navigate(`/loading/${uuid}`);
+    } else {
+      navigate('/loading');
+    }
+  };
+
+  if (loading) {
+    return <div className="display-page loading">加载中...</div>;
+  }
 
   return (
     <div className="display-page">
@@ -132,18 +192,30 @@ export default function DisplayPage() {
         <button className="control-reset-btn" onClick={handleReset}>
           再写一副
         </button>
+
+        <button className="control-steps-btn" onClick={handleViewSteps}>
+          查看生成步骤
+        </button>
       </div>
 
       <div className="display-container">
         {/* SVG预览区域 */}
         <div className="svg-preview-section">
-          <SpringFestivalSVG
-            data={data}
-            coupletOrder={coupletOrder}
-            horizontalDirection={horizontalDirection}
-            fuOrientation={fuOrientation}
-            topic={topic}
-          />
+          {isFailed ? (
+            <div className="generation-failed">
+              <div className="generation-failed-icon">✗</div>
+              <h2 className="generation-failed-title">生成失败</h2>
+              <p className="generation-failed-message">{errorMessage}</p>
+            </div>
+          ) : (
+            <SpringFestivalSVG
+              data={data}
+              coupletOrder={coupletOrder}
+              horizontalDirection={horizontalDirection}
+              fuOrientation={fuOrientation}
+              topic={topic}
+            />
+          )}
         </div>
       </div>
     </div>

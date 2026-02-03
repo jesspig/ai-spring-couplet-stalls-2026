@@ -22,7 +22,15 @@ export const router = createBrowserRouter(
           element: <LoadingPage />
         },
         {
+          path: 'loading/:uuid',
+          element: <LoadingPage />
+        },
+        {
           path: 'display',
+          element: <DisplayPage />
+        },
+        {
+          path: 'display/:uuid',
           element: <DisplayPage />
         }
       ]
