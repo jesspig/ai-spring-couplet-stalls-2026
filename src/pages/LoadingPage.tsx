@@ -365,9 +365,11 @@ export default function LoadingPage() {
   }, [navigate, handleProgressEvent, uuid]);
 
   // 计算进度百分比
-  const progressPercent = steps.length > 0
-    ? Math.round((steps.filter(s => s.status === 'completed').length / steps.length) * 100)
-    : 0;
+  const progressPercent = isCompleted
+    ? 100
+    : steps.length > 0
+      ? Math.round((steps.filter(s => s.status === 'completed').length / steps.length) * 100)
+      : 0;
 
   return (
     <div className="loading-page">
