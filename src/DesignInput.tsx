@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import SettingsButton from './components/SettingsButton';
 import HistoryModal from './components/HistoryModal';
@@ -18,6 +18,8 @@ export default function DesignInput() {
   const [errorType, setErrorType] = useState<'unconfigured' | 'fetchFailed' | null>(null);
   const [returnError, setReturnError] = useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   const [wordCount, setWordCount] = useState('5');
   const [coupletOrder, setCoupletOrder] = useState('rightUpper');
@@ -53,6 +55,23 @@ export default function DesignInput() {
   useEffect(() => {
     localStorage.setItem('fuOrientation', fuOrientation);
   }, [fuOrientation]);
+
+  // 点击外部关闭下拉菜单
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (modelDropdownRef.current && !modelDropdownRef.current.contains(event.target as Node)) {
+        setIsModelDropdownOpen(false);
+      }
+    };
+
+    if (isModelDropdownOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isModelDropdownOpen]);
 
   // 从location.state恢复表单数据（仅当从LoadingPage返回时）
   useEffect(() => {
@@ -301,20 +320,43 @@ export default function DesignInput() {
                 {errorType === 'fetchFailed' ? '获取模型列表失败' : '暂未配置模型，请点击设置'}
               </span>
             ) : (
-              <select
-                value={selectedModel}
-                onChange={(e) => {
-                  setSelectedModel(e.target.value);
-                  localStorage.setItem('cachedSelectedModel', e.target.value);
-                }}
-                className="model-select"
+              <div
+                className="model-dropdown"
+                ref={modelDropdownRef}
               >
-                {models.map(model => (
-                  <option key={model.id} value={model.id}>
-                    {model.id}
-                  </option>
-                ))}
-              </select>
+                <button
+                  className="model-dropdown-trigger"
+                  onClick={() => setIsModelDropdownOpen(!isModelDropdownOpen)}
+                  type="button"
+                >
+                  <span className="model-dropdown-selected">{selectedModel}</span>
+                  <svg
+                    className={`model-dropdown-arrow ${isModelDropdownOpen ? 'open' : ''}`}
+                    width="12"
+                    height="12"
+                    viewBox="0 0 12 12"
+                  >
+                    <path fill="currentColor" d="M6 8L1 3h10z" />
+                  </svg>
+                </button>
+                {isModelDropdownOpen && (
+                  <div className="model-dropdown-menu">
+                    {models.map(model => (
+                      <div
+                        key={model.id}
+                        className={`model-dropdown-item ${selectedModel === model.id ? 'selected' : ''}`}
+                        onClick={() => {
+                          setSelectedModel(model.id);
+                          localStorage.setItem('cachedSelectedModel', model.id);
+                          setIsModelDropdownOpen(false);
+                        }}
+                      >
+                        {model.id}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <button className="btn-primary" onClick={handleStartDesign}>
