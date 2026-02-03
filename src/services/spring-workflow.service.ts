@@ -43,6 +43,7 @@ export class SpringWorkflowService {
   private abortController: AbortController | null = null;
   private progressCallback: ProgressCallback | null = null;
   private recordId: string | null = null;
+  private syncPromise: Promise<void> = Promise.resolve();
 
   constructor(baseUrl: string, apiKey: string, model: string, recordId?: string) {
     this.config = {
@@ -68,9 +69,9 @@ export class SpringWorkflowService {
       this.progressCallback(event);
     }
 
-    // 同步到 IndexedDB（异步操作，不阻塞主流程）
+    // 同步到 IndexedDB（异步操作，不阻塞主流程，但保证顺序执行）
     if (this.recordId) {
-      this.syncStepToDB(event);
+      this.syncPromise = this.syncPromise.then(() => this.syncStepToDB(event));
     }
   }
 

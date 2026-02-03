@@ -128,9 +128,10 @@ export class HistoryDBService {
   }
 
   /**
-   * 添加生成步骤
+   * 添加或更新生成步骤
+   * 如果存在相同名称的 running 步骤，则更新该步骤；否则添加新步骤
    */
-  async addStep(id: string, step: WorkflowStep): Promise<void> {
+  async addOrUpdateStep(id: string, step: WorkflowStep): Promise<void> {
     if (!this.db) {
       await this.init();
     }
@@ -147,15 +148,39 @@ export class HistoryDBService {
           return;
         }
 
-        record.steps.push(step);
+        // 查找是否存在相同名称的 running 步骤
+        const existingIndex = record.steps.findIndex(
+          s => s.name === step.name && s.status === 'running'
+        );
+
+        if (existingIndex !== -1 && step.status !== 'running') {
+          // 更新现有步骤
+          record.steps[existingIndex] = {
+            ...record.steps[existingIndex],
+            status: step.status,
+            output: step.output,
+            error: step.error,
+            endTime: step.endTime
+          };
+        } else {
+          // 添加新步骤
+          record.steps.push(step);
+        }
 
         const putRequest = store.put(record);
         putRequest.onsuccess = () => resolve();
-        putRequest.onerror = () => reject(new Error('添加步骤失败'));
+        putRequest.onerror = () => reject(new Error('更新步骤失败'));
       };
 
       getRequest.onerror = () => reject(new Error('获取记录失败'));
     });
+  }
+
+  /**
+   * 添加生成步骤（已弃用，请使用 addOrUpdateStep）
+   */
+  async addStep(id: string, step: WorkflowStep): Promise<void> {
+    return this.addOrUpdateStep(id, step);
   }
 
   /**

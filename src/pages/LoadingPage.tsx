@@ -218,9 +218,24 @@ export default function LoadingPage() {
         }
 
         setTopic(record.topic);
-        
-        // 转换历史步骤为 UI 步骤
-        const uiSteps = record.steps.map((step: WorkflowStep) => ({
+
+        // 对步骤进行去重：同一步骤名称只保留最新状态（completed > running > failed > pending）
+        const stepMap = new Map<string, WorkflowStep>();
+        const statusPriority = { completed: 3, running: 2, failed: 1, pending: 0 };
+
+        for (const step of record.steps) {
+          const existing = stepMap.get(step.name);
+          if (!existing || statusPriority[step.status] >= statusPriority[existing.status]) {
+            stepMap.set(step.name, step);
+          }
+        }
+
+        // 转换历史步骤为 UI 步骤，保持原始顺序
+        const uniqueSteps = record.steps
+          .filter((step, index, arr) => arr.findIndex(s => s.name === step.name) === index)
+          .map(step => stepMap.get(step.name)!);
+
+        const uiSteps = uniqueSteps.map((step: WorkflowStep) => ({
           id: step.id,
           name: step.name,
           description: step.description,
@@ -229,7 +244,7 @@ export default function LoadingPage() {
           error: step.error,
           isRetry: false
         }));
-        
+
         setSteps(uiSteps);
         
         // 根据记录状态设置页面状态
