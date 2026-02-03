@@ -394,6 +394,21 @@ export default function DesignInput() {
         isOpen={historyModalOpen}
         onClose={() => setHistoryModalOpen(false)}
       />
+
+      {/* 底部提示信息 */}
+      <div className="footer-notice">
+        <div className="notice-tags">
+          <span className="notice-tag notice-tag-warning">风险提醒</span>
+        </div>
+        <p className="notice-text">
+          本项目托管于 GitHub Pages，仅使用浏览器本地存储技术，无后端服务器，不收集任何用户数据。
+          请自备 AI 服务 API Key。如需离线使用或保护隐私，建议克隆
+          <a href="https://github.com/jesspig/ai-spring-couplet-stalls-2026" target="_blank" rel="noopener noreferrer">本项目</a>
+          到本地并搭配
+          <a href="https://ollama.com" target="_blank" rel="noopener noreferrer">Ollama</a>
+          本地模型运行。
+        </p>
+      </div>
     </div>
   );
 }
