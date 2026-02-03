@@ -241,13 +241,30 @@
   border-radius: 8px;
   box-shadow: 0 8px 24px rgba(220, 38, 38, 0.15);
   z-index: 100;
-  animation: dropdownSlideIn 0.2s ease;
+  animation: dropdownSlideInDown 0.2s ease;
 }
 
-@keyframes dropdownSlideIn {
+.model-dropdown-menu.up {
+  top: auto;
+  bottom: calc(100% + 4px);
+  animation: dropdownSlideInUp 0.2s ease;
+}
+
+@keyframes dropdownSlideInDown {
   from {
     opacity: 0;
     transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes dropdownSlideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
   }
   to {
     opacity: 1;

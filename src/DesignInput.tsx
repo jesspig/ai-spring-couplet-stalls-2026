@@ -19,6 +19,7 @@ export default function DesignInput() {
   const [returnError, setReturnError] = useState<string | null>(null);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
+  const [dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
   const modelDropdownRef = useRef<HTMLDivElement>(null);
 
   const [wordCount, setWordCount] = useState('5');
@@ -72,6 +73,29 @@ export default function DesignInput() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [isModelDropdownOpen]);
+
+  // 检测下拉菜单展开方向
+  const checkDropdownDirection = useCallback(() => {
+    if (modelDropdownRef.current) {
+      const rect = modelDropdownRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      const dropdownHeight = 280; // 最大高度
+
+      if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+        setDropdownDirection('up');
+      } else {
+        setDropdownDirection('down');
+      }
+    }
+  }, []);
+
+  // 展开时检测方向
+  useEffect(() => {
+    if (isModelDropdownOpen) {
+      checkDropdownDirection();
+    }
+  }, [isModelDropdownOpen, checkDropdownDirection]);
 
   // 从location.state恢复表单数据（仅当从LoadingPage返回时）
   useEffect(() => {
@@ -340,7 +364,7 @@ export default function DesignInput() {
                   </svg>
                 </button>
                 {isModelDropdownOpen && (
-                  <div className="model-dropdown-menu">
+                  <div className={`model-dropdown-menu ${dropdownDirection}`}>
                     {models.map(model => (
                       <div
                         key={model.id}
