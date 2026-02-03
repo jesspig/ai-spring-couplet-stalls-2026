@@ -24,15 +24,17 @@
 4. **实时进度**: 展示生成过程各步骤的状态
 5. **SVG 展示**: 以精美的 SVG 格式展示春联
 6. **图片下载**: 将 SVG 导出为 PNG 图片
+7. **历史记录**: 使用 IndexedDB 本地存储生成历史，随时查看过往作品
 
 ### 项目结构
 
 ```plaintext
 src/
 ├── components/          # React 组件
-│   ├── SettingsButton.tsx    # 设置按钮
-│   ├── SettingsModal.tsx     # 设置弹窗
-│   └── SpringFestivalSVG.tsx # 春联 SVG 渲染组件
+│   ├── HistoryModal.tsx       # 历史记录弹窗
+│   ├── SettingsButton.tsx     # 设置按钮
+│   ├── SettingsModal.tsx      # 设置弹窗
+│   └── SpringFestivalSVG.tsx  # 春联 SVG 渲染组件
 ├── config/              # 配置文件
 │   └── prompts/              # LLM 提示词配置
 │       ├── analysis.prompt.ts      # 主题分析提示词
@@ -48,12 +50,14 @@ src/
 │   ├── LoadingPage.tsx         # 加载页面（生成进度）
 │   └── DisplayPage.tsx         # 展示页面（结果展示）
 ├── services/            # 服务层
-│   └── spring-workflow.service.ts # 春联生成工作流服务
+│   ├── spring-workflow.service.ts # 春联生成工作流服务
+│   └── history-db.service.ts      # 历史记录数据库服务
 ├── types/               # 类型定义
 │   ├── model.types.ts         # 模型相关类型
 │   └── spring.types.ts        # 春联相关类型
 ├── utils/               # 工具函数
-│   └── json-parser.util.ts    # JSON 解析工具
+│   ├── json-parser.util.ts    # JSON 解析工具
+│   └── uuid.util.ts           # UUID 生成工具
 ├── App.tsx              # 应用根组件
 ├── DesignInput.tsx      # 设计输入页面（入口）
 ├── main.tsx             # 应用入口
@@ -62,6 +66,11 @@ src/
 ```
 
 ## 构建和运行
+
+### 环境要求
+
+- Node.js >= 20
+- Yarn >= 4 (启用 Corepack)
 
 ### 开发模式
 
@@ -119,6 +128,7 @@ yarn preview
 - 使用 React 内置 `useState`、`useEffect` 管理本地状态
 - 使用 `localStorage` 持久化用户配置（API 配置、模型选择等）
 - 使用 `sessionStorage` 临时存储生成流程数据（主题、生成的春联内容等）
+- 使用 IndexedDB 持久化存储生成历史记录
 - 使用 React Router 的 `location.state` 传递页面间数据
 
 ### 工作流服务
@@ -128,7 +138,7 @@ yarn preview
 1. **主题分析**: 分析主题内涵，提取关键元素
 2. **上联生成**: 创作上联，奠定基调
 3. **下联生成**: 对仗下联，呼应上联
-4. **挥春生成**: 创作四字挥春
+4. **挥春生成**: 创作六个四字挥春
 5. **横批生成**: 点睛横批，统揽全联
 6. **候选选举**: 当多次尝试失败时，从历史候选中选择最佳结果
 
@@ -139,6 +149,22 @@ yarn preview
 - 支持中止操作
 - 字数验证（严格）
 - 进度事件系统
+- 自动同步到 IndexedDB
+
+### 数据存储策略
+
+- **localStorage**:
+  - API 配置（`apiUrl`, `apiKey`）
+  - 模型列表缓存（`cachedModels`）
+  - 选中的模型（`cachedSelectedModel`）
+  - 布局配置（`wordCount`, `coupletOrder`, `horizontalDirection`, `fuOrientation`）
+
+- **sessionStorage**:
+  - 当前生成会话数据（`topic`, `selectedModel`, `wordCount`, `recordId` 等）
+
+- **IndexedDB**:
+  - 生成历史记录（通过 `history-db.service.ts` 管理）
+  - 每条记录包含：UUID、创建时间、主题、字数、状态、步骤、结果等
 
 ### 配置要求
 
@@ -153,15 +179,15 @@ yarn preview
 ### 路由结构
 
 - `/`: 设计输入页面
-- `/loading`: 生成进度页面
-- `/display`: 结果展示页面
+- `/loading/:recordId`: 生成进度页面
+- `/display/:recordId`: 结果展示页面
 
 所有路由使用 `basename` 配置以支持 GitHub Pages 部署。
 
 ### 浏览器兼容性
 
 - 使用现代浏览器 API（ES6+）
-- 依赖 SVG、Canvas 等现代特性
+- 依赖 SVG、Canvas、IndexedDB 等现代特性
 - 建议使用最新版 Chrome、Edge、Firefox、Safari
 
 ### 提示词工程
@@ -235,3 +261,18 @@ A: 修改 `src/components/SpringFestivalSVG.tsx` 中的颜色配置和渲染逻�
 ### Q: 如何添加新的字数选项？
 
 A: 修改 `src/pages/DesignInput.tsx` 的字数选项，并在 `SpringFestivalSVG.tsx` 中添加相应的自适应参数计算逻辑。
+
+### Q: 历史记录存储在哪里？
+
+A: 历史记录存储在浏览器的 IndexedDB 中，由 `src/services/history-db.service.ts` 管理。数据仅保存在用户本地，不会上传到服务器。
+
+### Q: 如何清除历史记录？
+
+A: 可以在历史记录弹窗中删除单条记录，或通过浏览器开发者工具清除 IndexedDB 数据。
+
+## 隐私声明
+
+- 本项目为纯静态前端应用，无后端服务器
+- 所有数据仅存储在浏览器本地（localStorage、IndexedDB）
+- API Key 仅保存在用户本地，不会上传到任何服务器
+- 如需离线使用，可克隆项目到本地并搭配 Ollama 本地模型运行
