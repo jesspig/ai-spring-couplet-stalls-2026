@@ -2,30 +2,33 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import SpringFestivalSVG from '../components/SpringFestivalSVG';
 import { historyDB } from '../services/history-db.service';
-import type { GenerationRecord } from '../types/spring.types';
+import type { SpringFestivalData, GenerationRecord } from '../types/spring.types';
 
-
-export interface SpringFestivalData {
-  upperCouplet: string;
-  lowerCouplet: string;
-  horizontalScroll: string;
-  springScrolls: string[];
-}
 
 export default function DisplayPage() {
   const navigate = useNavigate();
-  const { uuid } = useParams<{ uuid?: string }>();
-  const [data, setData] = useState<SpringFestivalData>({ upperCouplet: '', lowerCouplet: '', horizontalScroll: '', springScrolls: [] });
+  const { uuid: recordId } = useParams<{ uuid?: string }>();
+  const [festivalData, setFestivalData] = useState<SpringFestivalData>({
+    upperCouplet: '',
+    lowerCouplet: '',
+    horizontalScroll: '',
+    springScrolls: []
+  });
   const [topic, setTopic] = useState('');
   const [isFailed, setIsFailed] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 使用状态管理控制面板选项，初始值从 sessionStorage 读取
+  const [coupletOrder, setCoupletOrder] = useState(sessionStorage.getItem('coupletOrder') || 'leftUpper');
+  const [horizontalDirection, setHorizontalDirection] = useState(sessionStorage.getItem('horizontalDirection') || 'leftToRight');
+  const [fuOrientation, setFuOrientation] = useState(sessionStorage.getItem('fuOrientation') || 'upright');
 
   useEffect(() => {
-    const loadFromHistory = async (recordId: string) => {
+    const loadFromHistory = async (id: string) => {
       try {
-        const record = await historyDB.getRecord(recordId);
-        
+        const record = await historyDB.getRecord(id);
+
         if (!record) {
           navigate('/');
           return;
@@ -34,7 +37,7 @@ export default function DisplayPage() {
         setTopic(record.topic);
 
         if (record.status === 'completed' && record.result) {
-          setData({
+          setFestivalData({
             upperCouplet: record.result.upperCouplet,
             lowerCouplet: record.result.lowerCouplet,
             horizontalScroll: record.result.horizontalScroll,
@@ -48,7 +51,7 @@ export default function DisplayPage() {
         console.error('加载历史记录失败:', err);
         navigate('/');
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     };
 
@@ -61,22 +64,17 @@ export default function DisplayPage() {
         return;
       }
 
-      setData(JSON.parse(storedData));
+      setFestivalData(JSON.parse(storedData));
       setTopic(storedTopic);
-      setLoading(false);
+      setIsLoading(false);
     };
 
-    if (uuid) {
-      loadFromHistory(uuid);
+    if (recordId) {
+      loadFromHistory(recordId);
     } else {
       loadFromSession();
     }
-  }, [navigate, uuid]);
-
-  // 使用状态管理控制面板选项，初始值从 sessionStorage 读取
-  const [coupletOrder, setCoupletOrder] = useState(sessionStorage.getItem('coupletOrder') || 'leftUpper');
-  const [horizontalDirection, setHorizontalDirection] = useState(sessionStorage.getItem('horizontalDirection') || 'leftToRight');
-  const [fuOrientation, setFuOrientation] = useState(sessionStorage.getItem('fuOrientation') || 'upright');
+  }, [navigate, recordId]);
 
   // 更新对联顺序
   const handleCoupletOrderChange = (order: string) => {
@@ -113,14 +111,14 @@ export default function DisplayPage() {
   };
 
   const handleViewSteps = () => {
-    if (uuid) {
-      navigate(`/loading/${uuid}`);
+    if (recordId) {
+      navigate(`/loading/${recordId}`);
     } else {
       navigate('/loading');
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return <div className="display-page loading">加载中...</div>;
   }
 
@@ -209,7 +207,7 @@ export default function DisplayPage() {
             </div>
           ) : (
             <SpringFestivalSVG
-              data={data}
+              data={festivalData}
               coupletOrder={coupletOrder}
               horizontalDirection={horizontalDirection}
               fuOrientation={fuOrientation}

@@ -45,9 +45,9 @@ export interface SpringScrollsResult {
 }
 
 /**
- * 春联生成响应结构
+ * 春联基础数据结构
  */
-export interface SpringFestivalResponse {
+export interface SpringFestivalData {
   /** 上联 */
   upperCouplet: string;
   /** 下联 */
@@ -113,8 +113,8 @@ export interface WorkflowStep {
 /**
  * 进度事件类型
  */
-export type ProgressEventType = 
-  | 'analysis_start' 
+export type ProgressEventType =
+  | 'analysis_start'
   | 'analysis_complete'
   | 'upper_couplet_start'
   | 'upper_couplet_complete'
@@ -159,9 +159,10 @@ export interface ProgressEvent {
 export type ProgressCallback = (event: ProgressEvent) => void;
 
 /**
- * 完整工作流响应结构
+ * 工作流响应结构
+ * 继承自 SpringFestivalData，添加工作流相关字段
  */
-export interface WorkflowResponse extends SpringFestivalResponse {
+export interface WorkflowResponse extends SpringFestivalData {
   /** 主题分析结果（可选，用于调试） */
   analysis?: TopicAnalysisResult;
   /** 是否需要回退到首页 */

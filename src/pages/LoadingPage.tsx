@@ -80,7 +80,7 @@ function getStepStatusClass(status: UIStepStatus): string {
 
 export default function LoadingPage() {
   const navigate = useNavigate();
-  const { uuid } = useParams<{ uuid?: string }>();
+  const { uuid: recordId } = useParams<{ uuid?: string }>();
   const [topic, setTopic] = useState('');
   const [error, setError] = useState('');
   const [steps, setSteps] = useState<UIStep[]>([]);
@@ -88,10 +88,10 @@ export default function LoadingPage() {
   const [isAborted, setIsAborted] = useState(false);
   const [isFailed, setIsFailed] = useState(false);
   const [expandedSteps, setExpandedSteps] = useState<Set<string>>(new Set());
-  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const stepIdCounterRef = useRef(0);
   const workflowServiceRef = useRef<SpringWorkflowService | null>(null);
-  const hasLoadedHistoryRef = useRef(false);
+  const historyLoadedRef = useRef(false);
 
   // 生成唯一步骤ID
   const generateStepId = useCallback(() => {
@@ -123,8 +123,8 @@ export default function LoadingPage() {
 
   // 跳转到展示页面
   const handleViewResult = useCallback(() => {
-    navigate(uuid ? `/display/${uuid}` : '/display');
-  }, [navigate, uuid]);
+    navigate(recordId ? `/display/${recordId}` : '/display');
+  }, [navigate, recordId]);
 
   // 返回首页
   const handleBackToHome = useCallback(() => {
@@ -207,11 +207,11 @@ export default function LoadingPage() {
   }, [generateStepId]);
 
   useEffect(() => {
-    const loadFromHistory = async (recordId: string): Promise<boolean> => {
+    const loadFromHistory = async (id: string): Promise<boolean> => {
       try {
-        setLoadingHistory(true);
-        const record = await historyDB.getRecord(recordId);
-        
+        setIsLoadingHistory(true);
+        const record = await historyDB.getRecord(id);
+
         if (!record) {
           // 找不到记录，返回 false 表示需要开始新生成
           return false;
@@ -246,7 +246,7 @@ export default function LoadingPage() {
         }));
 
         setSteps(uiSteps);
-        
+
         // 根据记录状态设置页面状态
         if (record.status === 'completed') {
           setIsCompleted(true);
@@ -261,21 +261,21 @@ export default function LoadingPage() {
           setError(record.error || '生成已中止');
         }
         // 'pending' 状态不处理，保持初始状态
-        
+
         return true; // 成功加载历史记录
       } catch (err) {
         console.error('加载历史记录失败:', err);
         return false; // 出错，返回 false 表示需要开始新生成
       } finally {
-        setLoadingHistory(false);
-        hasLoadedHistoryRef.current = true;
+        setIsLoadingHistory(false);
+        historyLoadedRef.current = true;
       }
     };
 
     const startNewGeneration = async () => {
       const storedTopic = sessionStorage.getItem('topic');
       const selectedModel = sessionStorage.getItem('selectedModel');
-      const recordId = sessionStorage.getItem('recordId');
+      const storedRecordId = sessionStorage.getItem('recordId');
       const wordCount = sessionStorage.getItem('wordCount') || '7';
       const coupletOrder = sessionStorage.getItem('coupletOrder') || 'leftUpper';
       const horizontalDirection = sessionStorage.getItem('horizontalDirection') || 'leftToRight';
@@ -304,7 +304,7 @@ export default function LoadingPage() {
           console.log(`主题：${storedTopic}`);
           console.log(`字数：${wordCount}字`);
 
-          const workflowService = new SpringWorkflowService(apiUrl, apiKey, selectedModel, recordId || undefined);
+          const workflowService = new SpringWorkflowService(apiUrl, apiKey, selectedModel, storedRecordId || undefined);
           workflowServiceRef.current = workflowService;
 
           // 设置进度回调
@@ -356,15 +356,15 @@ export default function LoadingPage() {
     };
 
     const initPage = async () => {
-      // 如果有 UUID，尝试从历史记录加载
-      if (uuid && !hasLoadedHistoryRef.current) {
-        const loaded = await loadFromHistory(uuid);
+      // 如果有 recordId，尝试从历史记录加载
+      if (recordId && !historyLoadedRef.current) {
+        const loaded = await loadFromHistory(recordId);
         // 如果找不到历史记录（新生成），则开始生成
         if (!loaded) {
           startNewGeneration();
         }
-      } else if (!uuid) {
-        // 没有 UUID，开始新生成
+      } else if (!recordId) {
+        // 没有 recordId，开始新生成
         startNewGeneration();
       }
     };
@@ -377,7 +377,7 @@ export default function LoadingPage() {
         workflowServiceRef.current.abort();
       }
     };
-  }, [navigate, handleProgressEvent, uuid]);
+  }, [navigate, handleProgressEvent, recordId]);
 
   // 计算进度百分比
   const progressPercent = isCompleted

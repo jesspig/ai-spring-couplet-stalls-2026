@@ -13,11 +13,11 @@ export default function DesignInput() {
   const [topic, setTopic] = useState('');
   const [models, setModels] = useState<Model[]>([]);
   const [selectedModel, setSelectedModel] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [isLoadingModels, setIsLoadingModels] = useState(true);
+  const [hasError, setHasError] = useState(false);
   const [errorType, setErrorType] = useState<'unconfigured' | 'fetchFailed' | null>(null);
-  const [returnError, setReturnError] = useState<string | null>(null);
-  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [navigationError, setNavigationError] = useState<string | null>(null);
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isModelDropdownOpen, setIsModelDropdownOpen] = useState(false);
   const [dropdownDirection, setDropdownDirection] = useState<'down' | 'up'>('down');
   const modelDropdownRef = useRef<HTMLDivElement>(null);
@@ -105,7 +105,7 @@ export default function DesignInput() {
       // 注意：不从formData恢复布局配置，保持用户之前的设置
     }
     if (state?.errorMessage) {
-      setReturnError(state.errorMessage);
+      setNavigationError(state.errorMessage);
     }
   }, [location.state]);
 
@@ -123,16 +123,16 @@ export default function DesignInput() {
         if (parsedModels.length > 0 && !selectedModel) {
           setSelectedModel(cachedSelectedModel || parsedModels[0].id);
         }
-        setLoading(false);
+        setIsLoadingModels(false);
       } catch (e) {
         console.error('解析缓存的模型列表失败', e);
       }
     }
 
     if (!apiUrl || !apiKey) {
-      setError(true);
+      setHasError(true);
       setErrorType('unconfigured');
-      setLoading(false);
+      setIsLoadingModels(false);
       return;
     }
 
@@ -154,21 +154,21 @@ export default function DesignInput() {
           setSelectedModel(modelToSelect);
           localStorage.setItem('cachedSelectedModel', modelToSelect);
         }
-        setLoading(false);
+        setIsLoadingModels(false);
       })
       .catch(() => {
         if (!cachedModels) {
-          setError(true);
+          setHasError(true);
           setErrorType('fetchFailed');
         }
-        setLoading(false);
+        setIsLoadingModels(false);
       });
   }, []);
 
   const handleModelsUpdate = (newModels: Model[]) => {
     setModels(newModels);
     localStorage.setItem('cachedModels', JSON.stringify(newModels));
-    setError(false);
+    setHasError(false);
     setErrorType(null);
     if (newModels.length > 0) {
       const currentExists = newModels.some(m => m.id === selectedModel);
@@ -190,7 +190,7 @@ export default function DesignInput() {
       return;
     }
 
-    const uuid = generateUUID();
+    const recordId = generateUUID();
 
     sessionStorage.setItem('topic', topic.trim());
     sessionStorage.setItem('selectedModel', selectedModel);
@@ -198,9 +198,9 @@ export default function DesignInput() {
     sessionStorage.setItem('coupletOrder', coupletOrder);
     sessionStorage.setItem('horizontalDirection', horizontalDirection);
     sessionStorage.setItem('fuOrientation', fuOrientation);
-    sessionStorage.setItem('recordId', uuid);
+    sessionStorage.setItem('recordId', recordId);
 
-    navigate(`/loading/${uuid}`);
+    navigate(`/loading/${recordId}`);
   };
 
   return (
@@ -219,7 +219,7 @@ export default function DesignInput() {
           <div className="header-actions">
             <button
               className="history-button"
-              onClick={() => setHistoryModalOpen(true)}
+              onClick={() => setIsHistoryModalOpen(true)}
               aria-label="查看历史记录"
             >
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -231,7 +231,7 @@ export default function DesignInput() {
           </div>
         </div>
 
-        {returnError && (
+        {navigationError && (
           <div className="error-message" style={{
             backgroundColor: '#fff2f0',
             border: '1px solid #ffccc7',
@@ -241,12 +241,12 @@ export default function DesignInput() {
             color: '#cf1322',
             fontSize: '14px'
           }}>
-            {returnError}
+            {navigationError}
           </div>
         )}
 
         <p className="design-subtitle">输入一个主题，AI为您创作专属春联</p>
-        
+
         <textarea
           className="design-textarea"
           placeholder="请输入一个主题，例如：马年、科技、家庭、事业..."
@@ -334,12 +334,12 @@ export default function DesignInput() {
             </div>
           </div>
         </div>
-        
+
         <div className="design-footer">
           <div className="model-selector">
-            {loading ? (
+            {isLoadingModels ? (
               <span className="model-status">加载模型中...</span>
-            ) : error || models.length === 0 ? (
+            ) : hasError || models.length === 0 ? (
               <span className="model-status error">
                 {errorType === 'fetchFailed' ? '获取模型列表失败' : '暂未配置模型，请点击设置'}
               </span>
@@ -391,8 +391,8 @@ export default function DesignInput() {
 
       {/* 历史记录模态框 */}
       <HistoryModal
-        isOpen={historyModalOpen}
-        onClose={() => setHistoryModalOpen(false)}
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
       />
 
       {/* 底部提示信息 */}

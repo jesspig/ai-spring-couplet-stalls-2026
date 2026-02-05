@@ -31,6 +31,9 @@ interface LLMConfig {
 
 /**
  * 验证字数
+ * @param text 待验证文本
+ * @param expected 期望字数
+ * @returns 错误信息或 null
  */
 function validateWordCount(text: string, expected: number): string | null {
   if (text.length !== expected) {
@@ -39,6 +42,10 @@ function validateWordCount(text: string, expected: number): string | null {
   return null;
 }
 
+/**
+ * 春联生成工作流服务
+ * 管理完整的春联生成流程，包括主题分析、上联生成、下联生成、挥春生成和横批生成
+ */
 export class SpringWorkflowService {
   private config: LLMConfig;
   private abortController: AbortController | null = null;
@@ -56,7 +63,8 @@ export class SpringWorkflowService {
   }
 
   /**
-   * 设置进度回调
+   * 设置进度回调函数
+   * @param callback 进度回调函数
    */
   setProgressCallback(callback: ProgressCallback): void {
     this.progressCallback = callback;
@@ -64,6 +72,7 @@ export class SpringWorkflowService {
 
   /**
    * 发送进度事件
+   * @param event 进度事件
    */
   private emit(event: ProgressEvent): void {
     if (this.progressCallback) {
@@ -78,6 +87,7 @@ export class SpringWorkflowService {
 
   /**
    * 同步步骤到 IndexedDB
+   * @param event 进度事件
    */
   private async syncStepToDB(event: ProgressEvent): Promise<void> {
     if (!this.recordId) return;
@@ -103,6 +113,8 @@ export class SpringWorkflowService {
 
   /**
    * 从事件类型获取状态
+   * @param eventType 事件类型
+   * @returns 步骤状态
    */
   private getStatusFromEventType(eventType: ProgressEventType): 'pending' | 'running' | 'completed' | 'failed' {
     if (eventType.includes('_start')) {
@@ -119,17 +131,19 @@ export class SpringWorkflowService {
 
   /**
    * 判断是否是完成类型的事件
+   * @param eventType 事件类型
+   * @returns 是否完成
    */
   private isCompleteEventType(eventType: ProgressEventType): boolean {
-    return eventType.includes('_complete') || eventType.includes('_failed') || 
-           eventType === 'workflow_complete' || eventType === 'workflow_failed' || 
+    return eventType.includes('_complete') || eventType.includes('_failed') ||
+           eventType === 'workflow_complete' || eventType === 'workflow_failed' ||
            eventType === 'workflow_aborted';
   }
 
   /**
-   * 检查是否已中止
+   * 检查是否已中止，如果已中止则抛出错误
    */
-  private checkAborted(): void {
+  private throwIfAborted(): void {
     if (this.abortController?.signal.aborted) {
       throw new Error('WORKFLOW_ABORTED');
     }
@@ -142,6 +156,14 @@ export class SpringWorkflowService {
     this.abortController?.abort();
   }
 
+  /**
+   * 执行春联生成工作流
+   * @param topic 主题
+   * @param wordCount 字数
+   * @param includeAnalysis 是否包含分析结果
+   * @param formData 表单配置数据
+   * @returns 工作流响应
+   */
   async executeWorkflow(
     topic: string,
     wordCount: string,
@@ -182,9 +204,9 @@ export class SpringWorkflowService {
     }
 
     try {
-      this.checkAborted();
+      this.throwIfAborted();
       console.log(`\n--- 阶段1：主题分析 ---`);
-      
+
       // 发送主题分析开始事件
       this.emit({
         type: 'analysis_start',
@@ -194,7 +216,7 @@ export class SpringWorkflowService {
       });
 
       const analysis = await this.analyzeTopic(topic, wordCount);
-      
+
       // 发送主题分析完成事件
       this.emit({
         type: 'analysis_complete',
@@ -203,7 +225,7 @@ export class SpringWorkflowService {
         stepDescription: '分析主题内涵，提取关键元素',
         output: analysis.substring(0, 200)
       });
-      
+
       console.log(`✓ 主题分析完成`);
       console.log(`  分析结果：${analysis.substring(0, 100)}${analysis.length > 100 ? '...' : ''}`);
 
@@ -213,13 +235,13 @@ export class SpringWorkflowService {
       let coupletSuccess = false;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        this.checkAborted();
+        this.throwIfAborted();
         console.log(`\n--- 对联尝试 ${attempt}/${maxAttempts} ---`);
 
         try {
-          this.checkAborted();
+          this.throwIfAborted();
           console.log(`\n  [步骤1] 生成上联`);
-          
+
           // 发送上联生成开始事件
           this.emit({
             type: 'upper_couplet_start',
@@ -233,11 +255,11 @@ export class SpringWorkflowService {
           upperCouplet = await this.generateUpperCouplet(topic, wordCount, analysis);
           console.log(`   上联生成：${upperCouplet}`);
           console.log(`  上联字数：${upperCouplet.length}字`);
-          
+
           const upperWordError = validateWordCount(upperCouplet, expectedCount);
           if (upperWordError) {
             console.log(`  ✗ 上联验证失败：${upperWordError}`);
-            
+
             // 发送上联生成失败事件
             this.emit({
               type: 'upper_couplet_failed',
@@ -248,13 +270,13 @@ export class SpringWorkflowService {
               isRetry: upperRetryCount > 0,
               retryCount: upperRetryCount
             });
-            
+
             upperRetryCount++;
             continue;
           }
-          
+
           console.log(`  ✓ 上联字数验证通过`);
-          
+
           // 发送上联生成完成事件
           this.emit({
             type: 'upper_couplet_complete',
@@ -266,9 +288,9 @@ export class SpringWorkflowService {
             retryCount: upperRetryCount
           });
 
-          this.checkAborted();
+          this.throwIfAborted();
           console.log(`\n  [步骤2] 生成下联`);
-          
+
           // 发送下联生成开始事件
           this.emit({
             type: 'lower_couplet_start',
@@ -280,11 +302,11 @@ export class SpringWorkflowService {
           lowerCouplet = await this.generateLowerCouplet(topic, wordCount, upperCouplet, analysis);
           console.log(`  下联生成：${lowerCouplet}`);
           console.log(`  下联字数：${lowerCouplet.length}字`);
-          
+
           const lowerWordError = validateWordCount(lowerCouplet, expectedCount);
           if (lowerWordError) {
             console.log(`  ✗ 下联验证失败：${lowerWordError}`);
-            
+
             // 发送下联生成失败事件
             this.emit({
               type: 'lower_couplet_failed',
@@ -293,14 +315,14 @@ export class SpringWorkflowService {
               stepDescription: '对仗下联，呼应上联',
               error: lowerWordError
             });
-            
+
             // 下联失败需要重试上联
             upperRetryCount++;
             continue;
           }
-          
+
           console.log(`  ✓ 下联字数验证通过`);
-          
+
           // 发送下联生成完成事件
           this.emit({
             type: 'lower_couplet_complete',
@@ -329,15 +351,15 @@ export class SpringWorkflowService {
 
       // 如果对联生成失败，尝试选举
       if (!coupletSuccess && history.length > 0) {
-        this.checkAborted();
+        this.throwIfAborted();
         console.log(`\n=== 触发选举机制 ===`);
         console.log(`候选数量：${history.length}个`);
         console.log(`字数要求：${wordCount}字`);
-        
-        const best = await this.electBestCandidate(history, wordCount);
+
+        const best = await this.selectBestCouplet(history, wordCount);
         console.log(`✓ 选举完成，选中第${best.selectedIndex + 1}个候选`);
         console.log(`  选择理由：${best.reason}`);
-        
+
         upperCouplet = best.upperCouplet;
         lowerCouplet = best.lowerCouplet;
 
@@ -367,7 +389,7 @@ export class SpringWorkflowService {
         console.log(`\n=== 春联生成失败 ===`);
         console.log(`尝试次数：${maxAttempts}次`);
         console.log(`失败原因：所有尝试均未通过字数验证`);
-        
+
         // 发送工作流失败事件
         this.emit({
           type: 'workflow_failed',
@@ -376,7 +398,7 @@ export class SpringWorkflowService {
           stepDescription: '未能生成符合要求的春联',
           error: '所有尝试均未通过字数验证'
         });
-        
+
         const result: WorkflowResponse = {
           upperCouplet: '',
           lowerCouplet: '',
@@ -411,7 +433,7 @@ export class SpringWorkflowService {
       let scrollsSuccess = false;
 
       for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        this.checkAborted();
+        this.throwIfAborted();
         console.log(`\n--- 挥春尝试 ${attempt}/${maxAttempts} ---`);
 
         try {
@@ -427,11 +449,11 @@ export class SpringWorkflowService {
 
           springScrolls = await this.generateSpringScrolls(topic, upperCouplet, lowerCouplet, analysis);
           console.log(`  挥春生成：${springScrolls.join('、')}`);
-          
+
           const scrollErrors = springScrolls.map(s => validateWordCount(s, 4)).filter(e => e);
           if (scrollErrors.length > 0) {
             console.log(`  ✗ 挥春验证失败：${scrollErrors.join('; ')}`);
-            
+
             // 发送挥春生成失败事件
             this.emit({
               type: 'spring_scrolls_failed',
@@ -442,13 +464,13 @@ export class SpringWorkflowService {
               isRetry: scrollsRetryCount > 0,
               retryCount: scrollsRetryCount
             });
-            
+
             scrollsRetryCount++;
             continue;
           }
-          
+
           console.log(`  ✓ 挥春字数验证通过`);
-          
+
           // 发送挥春生成完成事件
           this.emit({
             type: 'spring_scrolls_complete',
@@ -476,7 +498,7 @@ export class SpringWorkflowService {
       if (!scrollsSuccess) {
         springScrolls = ['万事如意', '前程似锦', '阖家欢乐', '马到成功', '身体健康', '财源广进'];
         console.log(`  使用默认挥春：${springScrolls.join('、')}`);
-        
+
         // 发送挥春生成完成事件（默认）
         this.emit({
           type: 'spring_scrolls_complete',
@@ -488,7 +510,7 @@ export class SpringWorkflowService {
       }
 
       // 第三步：生成横批
-      this.checkAborted();
+      this.throwIfAborted();
       console.log(`\n  [步骤4] 生成横批`);
 
       // 发送横批生成开始事件
@@ -525,7 +547,7 @@ export class SpringWorkflowService {
       console.log(`    下联：${lowerCouplet}`);
       console.log(`    横批：${horizontalScroll}`);
       console.log(`    挥春：${springScrolls.join('、')}`);
-      
+
       const result: WorkflowResponse = {
         upperCouplet,
         lowerCouplet,
@@ -558,7 +580,7 @@ export class SpringWorkflowService {
           stepName: '生成中止',
           stepDescription: '用户手动中止生成'
         });
-        
+
         const abortedResult = {
           upperCouplet: '',
           lowerCouplet: '',
@@ -592,6 +614,12 @@ export class SpringWorkflowService {
     }
   }
 
+  /**
+   * 分析主题
+   * @param topic 主题
+   * @param wordCount 字数
+   * @returns 主题分析结果
+   */
   private async analyzeTopic(topic: string, wordCount: string): Promise<TopicAnalysisResult> {
     console.log(`  调用LLM：主题分析`);
     const userPrompt = buildTopicAnalysisPrompt(topic, wordCount);
@@ -599,6 +627,13 @@ export class SpringWorkflowService {
     return content.trim();
   }
 
+  /**
+   * 生成上联
+   * @param topic 主题
+   * @param wordCount 字数
+   * @param analysis 主题分析结果
+   * @returns 上联
+   */
   private async generateUpperCouplet(
     topic: string,
     wordCount: string,
@@ -611,6 +646,14 @@ export class SpringWorkflowService {
     return result.upperCouplet;
   }
 
+  /**
+   * 生成下联
+   * @param topic 主题
+   * @param wordCount 字数
+   * @param upperCouplet 上联
+   * @param analysis 主题分析结果
+   * @returns 下联
+   */
   private async generateLowerCouplet(
     topic: string,
     wordCount: string,
@@ -624,6 +667,14 @@ export class SpringWorkflowService {
     return result.lowerCouplet;
   }
 
+  /**
+   * 生成挥春
+   * @param topic 主题
+   * @param upperCouplet 上联
+   * @param lowerCouplet 下联
+   * @param analysis 主题分析结果
+   * @returns 挥春列表
+   */
   private async generateSpringScrolls(
     topic: string,
     upperCouplet: string,
@@ -637,6 +688,14 @@ export class SpringWorkflowService {
     return result.springScrolls;
   }
 
+  /**
+   * 生成横批
+   * @param topic 主题
+   * @param upperCouplet 上联
+   * @param lowerCouplet 下联
+   * @param analysis 主题分析结果
+   * @returns 横批
+   */
   private async generateHorizontalScroll(
     topic: string,
     upperCouplet: string,
@@ -650,15 +709,21 @@ export class SpringWorkflowService {
     return result.horizontalScroll;
   }
 
-  private async electBestCandidate(
+  /**
+   * 从候选中选择最佳对联
+   * @param history 生成历史记录
+   * @param wordCount 字数
+   * @returns 最佳对联及选择信息
+   */
+  private async selectBestCouplet(
     history: GenerationHistory[],
     wordCount: string
   ): Promise<{ upperCouplet: string; lowerCouplet: string; selectedIndex: number; reason: string }> {
     const candidates = history.filter(h => h.upperCouplet.length === parseInt(wordCount) && h.lowerCouplet.length === parseInt(wordCount));
-    
+
     if (candidates.length === 0) {
-      return { 
-        upperCouplet: history[0].upperCouplet, 
+      return {
+        upperCouplet: history[0].upperCouplet,
         lowerCouplet: history[0].lowerCouplet,
         selectedIndex: 0,
         reason: '无符合字数要求的候选，选择第一个'
@@ -670,14 +735,21 @@ export class SpringWorkflowService {
     const result = JSON.parse(content) as { selectedIndex: number; reason: string };
 
     const selected = candidates[result.selectedIndex] || candidates[0];
-    return { 
-      upperCouplet: selected.upperCouplet, 
+    return {
+      upperCouplet: selected.upperCouplet,
       lowerCouplet: selected.lowerCouplet,
       selectedIndex: result.selectedIndex,
       reason: result.reason
     };
   }
 
+  /**
+   * 调用大语言模型
+   * @param systemPrompt 系统提示词
+   * @param userPrompt 用户提示词
+   * @param temperature 温度参数
+   * @returns 模型返回内容
+   */
   private async callLLM(
     systemPrompt: string,
     userPrompt: string,

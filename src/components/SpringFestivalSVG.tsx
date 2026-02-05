@@ -1,5 +1,5 @@
 import { useRef, useCallback } from 'react';
-import type { SpringFestivalData } from '../pages/DisplayPage';
+import type { SpringFestivalData } from '../types/spring.types';
 
 
 interface SpringFestivalSVGProps {
@@ -204,12 +204,11 @@ export default function SpringFestivalSVG({
   const leftParams = getCoupletParams(leftCoupletText || '');
   const rightParams = getCoupletParams(rightCoupletText || '');
   const coupletHeight = Math.max(leftParams.height, rightParams.height);
-  const maxCharCount = Math.max((leftCoupletText || '').length, (rightCoupletText || '').length);
 
   // 固定 SVG 高度为 1600 (1200 * 4/3 = 1600)，保持 3:4 比例
   const svgHeight = 1600;
   // 福字在对联区域偏上位置
-  const fuYPosition = coupletHeight / 4 ;
+  const fuYPosition = coupletHeight / 4;
   // 挥春位置根据对联高度动态调整
   const scrollsYPosition = 320 + coupletHeight + 60;
   // 主题位置固定在底部，稍微上移
