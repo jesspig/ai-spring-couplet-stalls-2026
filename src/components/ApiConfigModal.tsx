@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import type { Model } from '../types/model.types';
 
 /**
- * 设置弹窗组件属性
+ * API配置弹窗组件属性
  */
-interface SettingsModalProps {
+interface ApiConfigModalProps {
   /** 是否显示弹窗 */
   isOpen: boolean;
   /** 关闭弹窗回调 */
@@ -14,17 +14,17 @@ interface SettingsModalProps {
 }
 
 /**
- * 设置弹窗组件
+ * API配置弹窗组件
  * 用于配置 API URL 和 API Key，并测试连接
  */
-export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: SettingsModalProps) {
+export default function ApiConfigModal({ isOpen, onClose, onModelsUpdate }: ApiConfigModalProps) {
   const [apiUrl, setApiUrl] = useState('');
   const [apiKey, setApiKey] = useState('');
   const [testStatus, setTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [testMessage, setTestMessage] = useState('');
   const [models, setModels] = useState<Model[]>([]);
 
-  // 从 localStorage 加载保存的设置
+  // 从 localStorage 加载保存的API配置
   useEffect(() => {
     const savedUrl = localStorage.getItem('apiUrl');
     const savedKey = localStorage.getItem('apiKey');
@@ -32,7 +32,7 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
     if (savedKey) setApiKey(savedKey);
   }, []);
 
-  // 保存设置到 localStorage 并刷新模型列表
+  // 保存API配置到 localStorage 并刷新模型列表
   const handleSave = () => {
     if (!apiUrl.trim() || !apiKey.trim()) {
       setTestStatus('error');
@@ -103,17 +103,17 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
   if (!isOpen) return null;
 
   return (
-    <div className="settings-modal-overlay">
-      <div className="settings-modal">
-        <div className="settings-modal-header">
-          <h2>API 设置</h2>
-          <button className="settings-modal-close" onClick={onClose}>
+    <div className="api-config-modal-overlay">
+      <div className="api-config-modal">
+        <div className="api-config-modal-header">
+          <h2>API 配置</h2>
+          <button className="api-config-modal-close" onClick={onClose}>
             ×
           </button>
         </div>
 
-        <div className="settings-modal-body">
-          <div className="settings-form-group">
+        <div className="api-config-modal-body">
+          <div className="api-config-form-group">
             <label htmlFor="api-url">API URL</label>
             <input
               id="api-url"
@@ -124,7 +124,7 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
             />
           </div>
 
-          <div className="settings-form-group">
+          <div className="api-config-form-group">
             <label htmlFor="api-key">API Key</label>
             <input
               id="api-key"
@@ -135,9 +135,9 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
             />
           </div>
 
-          <div className="settings-test-section">
+          <div className="api-config-test-section">
             <button
-              className="settings-test-button"
+              className="api-config-test-button"
               onClick={handleTest}
               disabled={testStatus === 'testing'}
             >
@@ -145,13 +145,13 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
             </button>
 
             {testStatus !== 'idle' && testStatus !== 'testing' && (
-              <div className={`settings-test-message ${testStatus}`}>
+              <div className={`api-config-test-message ${testStatus}`}>
                 {testMessage}
               </div>
             )}
 
             {models.length > 0 && (
-              <div className="settings-models-list">
+              <div className="api-config-models-list">
                 <h4>可用模型：</h4>
                 <ul>
                   {models.map((model) => (
@@ -163,11 +163,11 @@ export default function SettingsModal({ isOpen, onClose, onModelsUpdate }: Setti
           </div>
         </div>
 
-        <div className="settings-modal-footer">
-          <button className="settings-button-secondary" onClick={onClose}>
+        <div className="api-config-modal-footer">
+          <button className="api-config-button-secondary" onClick={onClose}>
             取消
           </button>
-          <button className="settings-button-primary" onClick={handleSave}>
+          <button className="api-config-button-primary" onClick={handleSave}>
             保存
           </button>
         </div>

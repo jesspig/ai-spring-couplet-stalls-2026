@@ -13,6 +13,7 @@ import {
   buildHorizontalScrollPrompt
 } from "../config/prompts";
 import { parseLLMJson } from "../utils/json-parser.util";
+import { historyDB } from "./history-db.service";
 import type {
   TopicAnalysisResult,
   WorkflowResponse,
@@ -82,8 +83,6 @@ export class SpringWorkflowService {
     if (!this.recordId) return;
 
     try {
-      const { historyDB } = await import('./history-db.service');
-
       // 创建 WorkflowStep 对象
       const step: WorkflowStep = {
         id: `step_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -165,7 +164,6 @@ export class SpringWorkflowService {
     // 如果有 recordId，初始化 IndexedDB 并创建记录
     if (this.recordId) {
       try {
-        const { historyDB } = await import('./history-db.service');
         await historyDB.init();
         await historyDB.createRecord(
           this.recordId,
@@ -398,7 +396,6 @@ export class SpringWorkflowService {
         // 更新 IndexedDB 记录状态为失败
         if (this.recordId) {
           try {
-            const { historyDB } = await import('./history-db.service');
             await historyDB.updateRecordStatus(this.recordId, 'failed', undefined, result.errorMessage);
             console.log(`✓ 已更新生成记录状态: failed`);
           } catch (error) {
@@ -543,7 +540,6 @@ export class SpringWorkflowService {
       // 更新 IndexedDB 记录状态为已完成
       if (this.recordId) {
         try {
-          const { historyDB } = await import('./history-db.service');
           await historyDB.updateRecordStatus(this.recordId, 'completed', result);
           console.log(`✓ 已更新生成记录状态: completed`);
         } catch (error) {
@@ -583,7 +579,6 @@ export class SpringWorkflowService {
         // 更新 IndexedDB 记录状态为中止
         if (this.recordId) {
           try {
-            const { historyDB } = await import('./history-db.service');
             await historyDB.updateRecordStatus(this.recordId, 'aborted', undefined, abortedResult.errorMessage);
             console.log(`✓ 已更新生成记录状态: aborted`);
           } catch (error) {

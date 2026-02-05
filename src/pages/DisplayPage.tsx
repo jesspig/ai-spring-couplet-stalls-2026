@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import SpringFestivalSVG from '../components/SpringFestivalSVG';
 import { historyDB } from '../services/history-db.service';
 import type { GenerationRecord } from '../types/spring.types';
-import './DisplayPage.css';
+
 
 export interface SpringFestivalData {
   upperCouplet: string;

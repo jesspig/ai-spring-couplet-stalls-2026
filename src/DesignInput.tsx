@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import SettingsButton from './components/SettingsButton';
+import ApiConfigButton from './components/ApiConfigButton';
 import HistoryModal from './components/HistoryModal';
 import type { Model, ModelsResponse } from './types/model.types';
 import type { FormData } from './types/spring.types';
 import { generateUUID } from './utils/uuid.util';
-import './DesignInput.css';
+
 
 export default function DesignInput() {
   const navigate = useNavigate();
@@ -227,7 +227,7 @@ export default function DesignInput() {
                 <polyline points="12 6 12 12 16 14"/>
               </svg>
             </button>
-            <SettingsButton onModelsUpdate={handleModelsUpdate} />
+            <ApiConfigButton onModelsUpdate={handleModelsUpdate} />
           </div>
         </div>
 

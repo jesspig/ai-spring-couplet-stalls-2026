@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 import type { SpringFestivalData } from '../pages/DisplayPage';
-import './SpringFestivalSVG.css';
+
 
 interface SpringFestivalSVGProps {
   data: SpringFestivalData;

@@ -1,0 +1,59 @@
+@use '../abstracts' as *;
+
+// 福字样式
+.fu-character {
+  @include fu-character;
+
+  @include respond-to(2xl) { font-size: 7rem; }
+  @include respond-to(xl) { font-size: 6rem; }
+  @include respond-to(lg) { font-size: 5rem; }
+  @include respond-to(md) { font-size: 4rem; }
+  @include respond-to(sm) { font-size: 3rem; }
+  @include respond-to(xs) { font-size: 2.5rem; }
+}
+
+// 装饰性边框
+.chinese-border {
+  @include chinese-border;
+  background: $color-paper;
+}
+
+// 按钮样式
+.btn-primary {
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  @include button-primary;
+
+  @include respond-to(md) {
+    padding: 10px 24px;
+    font-size: 15px;
+  }
+
+  @include respond-to(sm) {
+    padding: 10px 20px;
+    font-size: 14px;
+    width: 100%;
+  }
+}
+
+// 文字竖排
+.vertical-text {
+  @include vertical-text;
+}
+
+// 纸张纹理背景
+.paper-texture {
+  @include paper-texture;
+}
+
+// 应用自定义滚动条
+* {
+  @include scrollbar-custom;
+}
+
+// Firefox 滚动条
+* {
+  scrollbar-width: thin;
+  scrollbar-color: $color-gold $color-bg;
+}

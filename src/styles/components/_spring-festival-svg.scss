@@ -1,0 +1,43 @@
+@use '../abstracts' as *;
+
+.svg-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  padding: 20px;
+  background: $color-paper;
+  border: 3px solid $color-gold;
+  border-radius: $radius-xl;
+  box-shadow: $shadow-lg;
+
+  svg {
+    max-width: 100%;
+    height: auto;
+    border-radius: $radius-lg;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  }
+}
+
+.download-btn {
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  font-family: $font-family-sans;
+  color: white;
+  @include gradient-primary;
+  border: none;
+  border-radius: $radius-lg;
+  cursor: pointer;
+  transition: all $transition-normal;
+  box-shadow: $shadow-md;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-xl;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}

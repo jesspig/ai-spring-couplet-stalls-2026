@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { SpringWorkflowService } from '../services/spring-workflow.service';
 import { historyDB } from '../services/history-db.service';
 import type { ProgressEvent, ProgressEventType, GenerationRecord, WorkflowStep } from '../types/spring.types';
-import './LoadingPage.css';
+
 
 /**
  * UI步骤状态

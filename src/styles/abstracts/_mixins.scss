@@ -1,0 +1,182 @@
+@use 'sass:math';
+@use 'variables' as *;
+
+// 响应式断点混合宏
+@mixin respond-to($breakpoint) {
+  @if $breakpoint == xs {
+    @media (max-width: $breakpoint-xs) { @content; }
+  } @else if $breakpoint == sm {
+    @media (max-width: $breakpoint-sm) { @content; }
+  } @else if $breakpoint == md {
+    @media (max-width: $breakpoint-md) { @content; }
+  } @else if $breakpoint == lg {
+    @media (max-width: $breakpoint-lg) { @content; }
+  } @else if $breakpoint == xl {
+    @media (max-width: $breakpoint-xl) { @content; }
+  } @else if $breakpoint == 2xl {
+    @media (max-width: $breakpoint-2xl) { @content; }
+  }
+}
+
+// 渐变背景混合宏
+@mixin gradient-primary {
+  background: linear-gradient(135deg, $color-primary 0%, $color-primary-dark 100%);
+}
+
+@mixin gradient-gold {
+  background: linear-gradient(180deg, $color-gold 0%, $color-gold-dark 100%);
+}
+
+@mixin gradient-gold-hover {
+  background: linear-gradient(180deg, $color-gold-light 0%, $color-gold 100%);
+}
+
+@mixin gradient-bg {
+  background: linear-gradient(135deg, $color-bg 0%, $color-primary-light 100%);
+}
+
+// 装饰边框混合宏
+@mixin chinese-border($border-width: 3px, $padding: 6px) {
+  border: $border-width solid $color-gold;
+  border-radius: $radius-lg;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -$padding;
+    left: -$padding;
+    right: -$padding;
+    bottom: -$padding;
+    border: 1px solid $color-primary;
+    border-radius: $radius-lg + math.div($padding, 2);
+    pointer-events: none;
+  }
+}
+
+// 按钮基础样式混合宏
+@mixin button-base {
+  cursor: pointer;
+  transition: all $transition-normal;
+  font-family: $font-family-sans;
+  border: none;
+  border-radius: $radius-lg;
+}
+
+@mixin button-primary {
+  @include button-base;
+  @include gradient-primary;
+  color: white;
+  box-shadow: $shadow-md;
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: $shadow-xl;
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// 卡片样式混合宏
+@mixin card {
+  background: $color-paper;
+  border: 3px solid $color-gold;
+  border-radius: $radius-2xl;
+  box-shadow: $shadow-lg;
+}
+
+// 福字样式混合宏
+@mixin fu-character($size: 8rem, $color: $color-primary) {
+  font-family: $font-family-serif;
+  font-size: $size;
+  font-weight: 900;
+  color: $color;
+  text-shadow: 4px 4px 0 $color-gold;
+  display: inline-block;
+
+  &.inverted {
+    transform: rotate(180deg);
+  }
+}
+
+// 滚动条样式混合宏
+@mixin scrollbar-custom {
+  &::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: $color-bg;
+    border-radius: $radius-sm;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    @include gradient-gold;
+    border-radius: $radius-sm;
+    border: 1px solid $color-primary-light;
+
+    &:hover {
+      @include gradient-gold-hover;
+    }
+  }
+
+  &::-webkit-scrollbar-corner {
+    background: $color-bg;
+  }
+}
+
+// 文字竖排混合宏
+@mixin vertical-text {
+  writing-mode: vertical-rl;
+  text-orientation: upright;
+  letter-spacing: 0.5em;
+}
+
+// 纸张纹理背景混合宏
+@mixin paper-texture {
+  background-color: $color-paper;
+  background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+}
+
+// Flex 居中混合宏
+@mixin flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+// 模态框基础样式混合宏
+@mixin modal-base {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  @include flex-center;
+  z-index: 1000;
+}
+
+// 模态框内容混合宏
+@mixin modal-content {
+  position: relative;
+  background: $color-paper;
+  border: 3px solid $color-gold;
+  border-radius: $radius-2xl;
+  box-shadow:
+    0 0 0 1px $color-primary,
+    0 8px 32px rgba(220, 38, 38, 0.15);
+}
+
+// 模态框头部混合宏
+@mixin modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 2px solid $color-gold;
+  @include gradient-bg;
+}

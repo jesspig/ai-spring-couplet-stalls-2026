@@ -1,0 +1,51 @@
+// 中国新年配色 - 红金主题
+$color-primary: #DC2626;
+$color-primary-dark: #991B1B;
+$color-primary-light: #FEE2E2;
+$color-gold: #CA8A04;
+$color-gold-light: #FDE68A;
+$color-gold-dark: #92400E;
+$color-bg: #FEF2F2;
+$color-bg-dark: #450A0A;
+$color-text: #450A0A;
+$color-text-light: #7F1D1D;
+$color-paper: #FFF8F0;
+
+// 字体
+$font-family-sans: 'Noto Sans SC', system-ui, -apple-system, sans-serif;
+$font-family-serif: 'Noto Serif SC', serif;
+
+// 间距
+$spacing-xs: 4px;
+$spacing-sm: 8px;
+$spacing-md: 16px;
+$spacing-lg: 24px;
+$spacing-xl: 32px;
+$spacing-2xl: 40px;
+
+// 圆角
+$radius-sm: 4px;
+$radius-md: 6px;
+$radius-lg: 8px;
+$radius-xl: 12px;
+$radius-2xl: 16px;
+$radius-3xl: 20px;
+
+// 断点
+$breakpoint-xs: 375px;
+$breakpoint-sm: 480px;
+$breakpoint-md: 640px;
+$breakpoint-lg: 768px;
+$breakpoint-xl: 1024px;
+$breakpoint-2xl: 1440px;
+
+// 阴影
+$shadow-sm: 0 2px 8px rgba(220, 38, 38, 0.1);
+$shadow-md: 0 4px 14px rgba(220, 38, 38, 0.4);
+$shadow-lg: 0 4px 20px rgba(220, 38, 38, 0.15);
+$shadow-xl: 0 6px 20px rgba(220, 38, 38, 0.5);
+$shadow-gold: 0 2px 8px rgba(202, 138, 4, 0.2);
+
+// 过渡
+$transition-fast: 0.2s ease;
+$transition-normal: 0.3s ease;

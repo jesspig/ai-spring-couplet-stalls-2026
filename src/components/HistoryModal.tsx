@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { GenerationRecord } from '../types/spring.types';
 import { historyDB } from '../services/history-db.service';
-import './HistoryModal.css';
+
 
 interface HistoryModalProps {
   isOpen: boolean;
