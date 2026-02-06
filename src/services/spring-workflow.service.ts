@@ -1,24 +1,16 @@
-import {
-  TOPIC_ANALYSIS_SYSTEM_PROMPT,
-  buildTopicAnalysisPrompt,
-  UPPER_COUPLET_SYSTEM_PROMPT,
-  buildUpperCoupletPrompt,
-  LOWER_COUPLET_SYSTEM_PROMPT,
-  buildLowerCoupletPrompt,
-  SPRING_SCROLLS_SYSTEM_PROMPT,
-  buildSpringScrollsPrompt,
-  ELECTION_SYSTEM_PROMPT,
-  buildElectionPrompt,
-  HORIZONTAL_SCROLL_SYSTEM_PROMPT,
-  buildHorizontalScrollPrompt
-} from "../config/prompts";
-import { parseLLMJson } from "../utils/json-parser.util";
 import { historyDB } from "./history-db.service";
 import { ApiService } from "./llm/api.service";
+import {
+  TopicAnalyzerService,
+  CoupletGeneratorService,
+  SpringScrollsGeneratorService,
+  HorizontalScrollGeneratorService,
+  ElectionService,
+  type GenerationHistory
+} from "./generation";
 import type {
   TopicAnalysisResult,
   WorkflowResponse,
-  GenerationHistory,
   ProgressCallback,
   ProgressEvent,
   WorkflowStep
@@ -54,6 +46,11 @@ export class SpringWorkflowService {
   private recordId: string | null = null;
   private syncPromise: Promise<void> = Promise.resolve();
   private apiService: ApiService;
+  private topicAnalyzer: TopicAnalyzerService;
+  private coupletGenerator: CoupletGeneratorService;
+  private springScrollsGenerator: SpringScrollsGeneratorService;
+  private horizontalScrollGenerator: HorizontalScrollGeneratorService;
+  private electionService: ElectionService;
 
   constructor(baseUrl: string, apiKey: string, model: string, recordId?: string) {
     this.config = {
@@ -63,6 +60,13 @@ export class SpringWorkflowService {
     };
     this.recordId = recordId || null;
     this.apiService = new ApiService({ baseUrl: this.config.baseUrl, apiKey: this.config.apiKey });
+    
+    // 初始化生成器服务，传入模型名称
+    this.topicAnalyzer = new TopicAnalyzerService(this.apiService, this.config.model);
+    this.coupletGenerator = new CoupletGeneratorService(this.apiService, this.config.model);
+    this.springScrollsGenerator = new SpringScrollsGeneratorService(this.apiService, this.config.model);
+    this.horizontalScrollGenerator = new HorizontalScrollGeneratorService(this.apiService, this.config.model);
+    this.electionService = new ElectionService(this.apiService, this.config.model);
   }
 
   /**
@@ -742,10 +746,7 @@ export class SpringWorkflowService {
    * @returns 主题分析结果
    */
   private async analyzeTopic(topic: string, wordCount: string): Promise<TopicAnalysisResult> {
-    console.log(`  调用LLM：主题分析`);
-    const userPrompt = buildTopicAnalysisPrompt(topic, wordCount);
-    const content = await this.callLLM(TOPIC_ANALYSIS_SYSTEM_PROMPT, userPrompt, 0.7);
-    return content.trim();
+    return this.topicAnalyzer.analyzeTopic(topic, wordCount);
   }
 
   /**
@@ -760,11 +761,7 @@ export class SpringWorkflowService {
     wordCount: string,
     analysis: TopicAnalysisResult
   ): Promise<string> {
-    console.log(`  调用LLM：上联生成`);
-    const userPrompt = buildUpperCoupletPrompt(topic, wordCount, analysis);
-    const content = await this.callLLM(UPPER_COUPLET_SYSTEM_PROMPT, userPrompt, 0.8);
-    const result = parseLLMJson<{ upperCouplet: string }>(content);
-    return result.upperCouplet;
+    return this.coupletGenerator.generateUpperCouplet(topic, wordCount, analysis);
   }
 
   /**
@@ -781,11 +778,7 @@ export class SpringWorkflowService {
     upperCouplet: string,
     analysis: TopicAnalysisResult
   ): Promise<string> {
-    console.log(`  调用LLM：下联生成`);
-    const userPrompt = buildLowerCoupletPrompt(topic, wordCount, upperCouplet, analysis);
-    const content = await this.callLLM(LOWER_COUPLET_SYSTEM_PROMPT, userPrompt, 0.8);
-    const result = parseLLMJson<{ lowerCouplet: string }>(content);
-    return result.lowerCouplet;
+    return this.coupletGenerator.generateLowerCouplet(topic, wordCount, upperCouplet, analysis);
   }
 
   /**
@@ -802,11 +795,7 @@ export class SpringWorkflowService {
     lowerCouplet: string,
     analysis: TopicAnalysisResult
   ): Promise<string[]> {
-    console.log(`  调用LLM：挥春生成`);
-    const userPrompt = buildSpringScrollsPrompt(topic, upperCouplet, lowerCouplet, analysis);
-    const content = await this.callLLM(SPRING_SCROLLS_SYSTEM_PROMPT, userPrompt, 0.8);
-    const result = parseLLMJson<{ springScrolls: string[] }>(content);
-    return result.springScrolls;
+    return this.springScrollsGenerator.generateSpringScrolls(topic, upperCouplet, lowerCouplet, analysis);
   }
 
   /**
@@ -823,11 +812,7 @@ export class SpringWorkflowService {
     lowerCouplet: string,
     analysis: TopicAnalysisResult
   ): Promise<string> {
-    console.log(`  调用LLM：横批生成`);
-    const userPrompt = buildHorizontalScrollPrompt(topic, upperCouplet, lowerCouplet, analysis);
-    const content = await this.callLLM(HORIZONTAL_SCROLL_SYSTEM_PROMPT, userPrompt, 0.8);
-    const result = parseLLMJson<{ horizontalScroll: string }>(content);
-    return result.horizontalScroll;
+    return this.horizontalScrollGenerator.generateHorizontalScroll(topic, upperCouplet, lowerCouplet, analysis);
   }
 
   /**
@@ -840,50 +825,12 @@ export class SpringWorkflowService {
     history: GenerationHistory[],
     wordCount: string
   ): Promise<{ upperCouplet: string; lowerCouplet: string; selectedIndex: number; reason: string }> {
-    const candidates = history.filter(h => h.upperCouplet.length === parseInt(wordCount) && h.lowerCouplet.length === parseInt(wordCount));
-
-    if (candidates.length === 0) {
-      return {
-        upperCouplet: history[0].upperCouplet,
-        lowerCouplet: history[0].lowerCouplet,
-        selectedIndex: 0,
-        reason: '无符合字数要求的候选，选择第一个'
-      };
-    }
-
-    const userPrompt = buildElectionPrompt(candidates, wordCount);
-    const content = await this.callLLM(ELECTION_SYSTEM_PROMPT, userPrompt, 0.3);
-    const result = JSON.parse(content) as { selectedIndex: number; reason: string };
-
-    const selected = candidates[result.selectedIndex] || candidates[0];
+    const result = await this.electionService.selectBestCouplet(history, wordCount);
     return {
-      upperCouplet: selected.upperCouplet,
-      lowerCouplet: selected.lowerCouplet,
+      upperCouplet: result.upperCouplet,
+      lowerCouplet: result.lowerCouplet,
       selectedIndex: result.selectedIndex,
       reason: result.reason
     };
-  }
-
-  /**
-   * 调用大语言模型
-   * @param systemPrompt 系统提示词
-   * @param userPrompt 用户提示词
-   * @param temperature 温度参数
-   * @returns 模型返回内容
-   */
-  private async callLLM(
-    systemPrompt: string,
-    userPrompt: string,
-    temperature: number
-  ): Promise<string> {
-    return this.apiService.chatCompletion(
-      this.config.model,
-      [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt }
-      ],
-      temperature,
-      500
-    );
   }
 }
