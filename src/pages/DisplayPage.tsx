@@ -37,23 +37,29 @@ export default function DisplayPage() {
         }
 
         setTopic(record.topic);
-
-        if (record.status === 'completed' && record.result) {
-          setFestivalData({
-            upperCouplet: record.result.upperCouplet,
-            lowerCouplet: record.result.lowerCouplet,
-            horizontalScroll: record.result.horizontalScroll,
-            springScrolls: record.result.springScrolls
-          });
-        } else if (record.status === 'failed' || record.status === 'aborted') {
-          setIsFailed(true);
-          setErrorMessage(record.error || '生成失败');
-        }
+        updateFestivalDataFromRecord(record);
       } catch (err) {
         console.error('加载历史记录失败:', err);
         navigate('/');
       } finally {
         setIsLoading(false);
+      }
+    };
+
+    const updateFestivalDataFromRecord = (record: GenerationRecord): void => {
+      if (record.status === 'completed' && record.result) {
+        setFestivalData({
+          upperCouplet: record.result.upperCouplet,
+          lowerCouplet: record.result.lowerCouplet,
+          horizontalScroll: record.result.horizontalScroll,
+          springScrolls: record.result.springScrolls
+        });
+        return;
+      }
+
+      if (record.status === 'failed' || record.status === 'aborted') {
+        setIsFailed(true);
+        setErrorMessage(record.error || '生成失败');
       }
     };
 

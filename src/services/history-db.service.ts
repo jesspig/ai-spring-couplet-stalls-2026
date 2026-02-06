@@ -23,35 +23,66 @@ export class HistoryDBService {
   private database: IDBDatabase | null = null;
 
   /**
+   * 确保数据库已初始化
+   */
+  private async ensureDatabase(): Promise<IDBDatabase> {
+    if (!this.database) {
+      await this.init();
+    }
+    return this.database!;
+  }
+
+  /**
+   * 创建事务
+   * @param mode 事务模式
+   * @returns 事务和对象存储
+   */
+  private createTransaction(mode: IDBTransactionMode): {
+    transaction: IDBTransaction;
+    store: IDBObjectStore;
+  } {
+    const transaction = this.database!.transaction([RECORDS_STORE_NAME], mode);
+    const store = transaction.objectStore(RECORDS_STORE_NAME);
+    return { transaction, store };
+  }
+
+  /**
+   * 将 IDBRequest 转换为 Promise
+   * @param request IndexedDB 请求
+   * @returns Promise
+   */
+  private requestToPromise<T>(request: IDBRequest): Promise<T> {
+    return new Promise((resolve, reject) => {
+      request.onsuccess = () => resolve(request.result as T);
+      request.onerror = () => reject(new Error('操作失败'));
+    });
+  }
+
+  /**
+   * 创建对象存储（仅在数据库升级时调用）
+   * @param db 数据库实例
+   */
+  private createStoreIfNeeded(db: IDBDatabase): void {
+    if (!db.objectStoreNames.contains(RECORDS_STORE_NAME)) {
+      const store = db.createObjectStore(RECORDS_STORE_NAME, { keyPath: 'id' });
+      store.createIndex('createdAt', 'createdAt', { unique: false });
+      store.createIndex('status', 'status', { unique: false });
+    }
+  }
+
+  /**
    * 初始化数据库
    * 打开数据库连接，必要时创建对象存储和索引
    */
   async init(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const request = indexedDB.open(COUPLET_DB_NAME, COUPLET_DB_VERSION);
+    const request = indexedDB.open(COUPLET_DB_NAME, COUPLET_DB_VERSION);
 
-      request.onerror = () => {
-        reject(new Error('无法打开 IndexedDB'));
-      };
+    request.onupgradeneeded = (event) => {
+      const db = (event.target as IDBOpenDBRequest).result;
+      this.createStoreIfNeeded(db);
+    };
 
-      request.onsuccess = () => {
-        this.database = request.result;
-        resolve();
-      };
-
-      request.onupgradeneeded = (event) => {
-        const db = (event.target as IDBOpenDBRequest).result;
-
-        // 创建对象存储，使用 id 作为主键
-        if (!db.objectStoreNames.contains(RECORDS_STORE_NAME)) {
-          const store = db.createObjectStore(RECORDS_STORE_NAME, { keyPath: 'id' });
-
-          // 创建索引以便按创建时间查询
-          store.createIndex('createdAt', 'createdAt', { unique: false });
-          store.createIndex('status', 'status', { unique: false });
-        }
-      };
-    });
+    this.database = await this.requestToPromise<IDBDatabase>(request);
   }
 
   /**
@@ -67,9 +98,7 @@ export class HistoryDBService {
     wordCount: string,
     formData: FormData
   ): Promise<void> {
-    if (!this.database) {
-      await this.init();
-    }
+    await this.ensureDatabase();
 
     const record: Omit<GenerationRecord, 'result' | 'error'> = {
       id: recordId,
@@ -81,14 +110,10 @@ export class HistoryDBService {
       steps: []
     };
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.database!.transaction([RECORDS_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(RECORDS_STORE_NAME);
-      const request = store.add(record);
+    const { store } = this.createTransaction('readwrite');
+    const request = store.add(record);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(new Error('创建记录失败'));
-    });
+    await this.requestToPromise(request);
   }
 
   /**
@@ -104,37 +129,22 @@ export class HistoryDBService {
     result?: WorkflowResponse,
     error?: string
   ): Promise<void> {
-    if (!this.database) {
-      await this.init();
+    await this.ensureDatabase();
+
+    const { store } = this.createTransaction('readwrite');
+    const getRequest = store.get(recordId);
+    const record = await this.requestToPromise<GenerationRecord>(getRequest);
+
+    if (!record) {
+      throw new Error('记录不存在');
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.database!.transaction([RECORDS_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(RECORDS_STORE_NAME);
-      const getRequest = store.get(recordId);
+    record.status = status;
+    if (result) record.result = result;
+    if (error) record.error = error;
 
-      getRequest.onsuccess = () => {
-        const record = getRequest.result as GenerationRecord | undefined;
-        if (!record) {
-          reject(new Error('记录不存在'));
-          return;
-        }
-
-        record.status = status;
-        if (result) {
-          record.result = result;
-        }
-        if (error) {
-          record.error = error;
-        }
-
-        const putRequest = store.put(record);
-        putRequest.onsuccess = () => resolve();
-        putRequest.onerror = () => reject(new Error('更新记录失败'));
-      };
-
-      getRequest.onerror = () => reject(new Error('获取记录失败'));
-    });
+    const putRequest = store.put(record);
+    await this.requestToPromise(putRequest);
   }
 
   /**
@@ -144,48 +154,34 @@ export class HistoryDBService {
    * @param step 工作流步骤
    */
   async addOrUpdateStep(recordId: string, step: WorkflowStep): Promise<void> {
-    if (!this.database) {
-      await this.init();
+    await this.ensureDatabase();
+
+    const { store } = this.createTransaction('readwrite');
+    const getRequest = store.get(recordId);
+    const record = await this.requestToPromise<GenerationRecord>(getRequest);
+
+    if (!record) {
+      throw new Error('记录不存在');
     }
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.database!.transaction([RECORDS_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(RECORDS_STORE_NAME);
-      const getRequest = store.get(recordId);
+    const existingIndex = record.steps.findIndex(
+      s => s.name === step.name && s.status === 'running'
+    );
 
-      getRequest.onsuccess = () => {
-        const record = getRequest.result as GenerationRecord | undefined;
-        if (!record) {
-          reject(new Error('记录不存在'));
-          return;
-        }
-
-        // 查找是否存在相同名称的 running 步骤
-        const existingIndex = record.steps.findIndex(
-          s => s.name === step.name && s.status === 'running'
-        );
-
-        if (existingIndex !== -1 && step.status !== 'running') {
-          // 更新现有步骤
-          record.steps[existingIndex] = {
-            ...record.steps[existingIndex],
-            status: step.status,
-            output: step.output,
-            error: step.error,
-            endTime: step.endTime
-          };
-        } else {
-          // 添加新步骤
-          record.steps.push(step);
-        }
-
-        const putRequest = store.put(record);
-        putRequest.onsuccess = () => resolve();
-        putRequest.onerror = () => reject(new Error('更新步骤失败'));
+    if (existingIndex !== -1 && step.status !== 'running') {
+      record.steps[existingIndex] = {
+        ...record.steps[existingIndex],
+        status: step.status,
+        output: step.output,
+        error: step.error,
+        endTime: step.endTime
       };
+    } else {
+      record.steps.push(step);
+    }
 
-      getRequest.onerror = () => reject(new Error('获取记录失败'));
-    });
+    const putRequest = store.put(record);
+    await this.requestToPromise(putRequest);
   }
 
   /**
@@ -202,21 +198,12 @@ export class HistoryDBService {
    * @returns 生成记录或 null
    */
   async getRecord(recordId: string): Promise<GenerationRecord | null> {
-    if (!this.database) {
-      await this.init();
-    }
+    await this.ensureDatabase();
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.database!.transaction([RECORDS_STORE_NAME], 'readonly');
-      const store = transaction.objectStore(RECORDS_STORE_NAME);
-      const request = store.get(recordId);
+    const { store } = this.createTransaction('readonly');
+    const request = store.get(recordId);
 
-      request.onsuccess = () => {
-        resolve(request.result as GenerationRecord | null);
-      };
-
-      request.onerror = () => reject(new Error('获取记录失败'));
-    });
+    return await this.requestToPromise<GenerationRecord | null>(request);
   }
 
   /**
@@ -224,15 +211,13 @@ export class HistoryDBService {
    * @returns 生成记录列表
    */
   async getAllRecords(): Promise<GenerationRecord[]> {
-    if (!this.database) {
-      await this.init();
-    }
+    await this.ensureDatabase();
+
+    const { store } = this.createTransaction('readonly');
+    const index = store.index('createdAt');
+    const request = index.openCursor(null, 'prev');
 
     return new Promise((resolve, reject) => {
-      const transaction = this.database!.transaction([RECORDS_STORE_NAME], 'readonly');
-      const store = transaction.objectStore(RECORDS_STORE_NAME);
-      const index = store.index('createdAt');
-      const request = index.openCursor(null, 'prev');
       const records: GenerationRecord[] = [];
 
       request.onsuccess = (event) => {
@@ -254,36 +239,24 @@ export class HistoryDBService {
    * @param recordId 记录唯一标识
    */
   async deleteRecord(recordId: string): Promise<void> {
-    if (!this.database) {
-      await this.init();
-    }
+    await this.ensureDatabase();
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.database!.transaction([RECORDS_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(RECORDS_STORE_NAME);
-      const request = store.delete(recordId);
+    const { store } = this.createTransaction('readwrite');
+    const request = store.delete(recordId);
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(new Error('删除记录失败'));
-    });
+    await this.requestToPromise(request);
   }
 
   /**
    * 清空所有记录
    */
   async clearAllRecords(): Promise<void> {
-    if (!this.database) {
-      await this.init();
-    }
+    await this.ensureDatabase();
 
-    return new Promise((resolve, reject) => {
-      const transaction = this.database!.transaction([RECORDS_STORE_NAME], 'readwrite');
-      const store = transaction.objectStore(RECORDS_STORE_NAME);
-      const request = store.clear();
+    const { store } = this.createTransaction('readwrite');
+    const request = store.clear();
 
-      request.onsuccess = () => resolve();
-      request.onerror = () => reject(new Error('清空记录失败'));
-    });
+    await this.requestToPromise(request);
   }
 }
 

@@ -175,445 +175,563 @@ export class SpringWorkflowService {
   ): Promise<WorkflowResponse> {
     this.abortController = new AbortController();
 
-    const maxAttempts = 5;
-    const history: GenerationHistory[] = [];
-    const expectedCount = parseInt(wordCount, 10);
-    let upperRetryCount = 0;
-    let scrollsRetryCount = 0;
-
     console.log(`\n=== 开始春联生成工作流 ===`);
     console.log(`主题：${topic}`);
     console.log(`字数：${wordCount}字`);
-    console.log(`最大尝试次数：${maxAttempts}`);
 
-    // 如果有 recordId，初始化 IndexedDB 并创建记录
-    if (this.recordId) {
+    await this.initializeRecord(topic, wordCount, formData);
+
+    try {
+      const analysis = await this.performAnalysis(topic, wordCount);
+      const coupletResult = await this.generateCouplets(topic, wordCount, analysis);
+      const springScrolls = await this.generateSpringScrolls(topic, coupletResult.upperCouplet, coupletResult.lowerCouplet, analysis);
+      const horizontalScroll = await this.generateHorizontalScroll(topic, coupletResult.upperCouplet, coupletResult.lowerCouplet, analysis);
+
+      const result = this.buildSuccessResult(coupletResult, horizontalScroll, springScrolls, includeAnalysis ? analysis : undefined);
+      await this.updateRecordCompleted(result);
+
+      this.emitWorkflowComplete();
+      return result;
+    } catch (error) {
+      return this.handleWorkflowError(error, topic, wordCount, formData);
+    }
+  }
+
+  /**
+   * 初始化记录
+   */
+  private async initializeRecord(topic: string, wordCount: string, formData?: any): Promise<void> {
+    if (!this.recordId) return;
+
+    try {
+      await historyDB.init();
+      await historyDB.createRecord(
+        this.recordId,
+        topic,
+        wordCount,
+        formData || {
+          coupletOrder: 'upper-lower',
+          horizontalDirection: 'left-right',
+          fuDirection: 'upright'
+        }
+      );
+      console.log(`✓ 已创建生成记录: ${this.recordId}`);
+    } catch (error) {
+      console.error('创建 IndexedDB 记录失败:', error);
+    }
+  }
+
+  /**
+   * 执行主题分析
+   */
+  private async performAnalysis(topic: string, wordCount: string): Promise<TopicAnalysisResult> {
+    this.throwIfAborted();
+    console.log(`\n--- 阶段1：主题分析 ---`);
+
+    this.emit({
+      type: 'analysis_start',
+      timestamp: Date.now(),
+      stepName: '主题分析',
+      stepDescription: '分析主题内涵，提取关键元素'
+    });
+
+    const analysis = await this.analyzeTopic(topic, wordCount);
+
+    this.emit({
+      type: 'analysis_complete',
+      timestamp: Date.now(),
+      stepName: '主题分析',
+      stepDescription: '分析主题内涵，提取关键元素',
+      output: analysis.substring(0, 200)
+    });
+
+    console.log(`✓ 主题分析完成`);
+    console.log(`  分析结果：${analysis.substring(0, 100)}${analysis.length > 100 ? '...' : ''}`);
+
+    return analysis;
+  }
+
+  /**
+   * 生成对联
+   */
+  private async generateCouplets(
+    topic: string,
+    wordCount: string,
+    analysis: TopicAnalysisResult
+  ): Promise<{ upperCouplet: string; lowerCouplet: string; history: GenerationHistory[] }> {
+    const maxAttempts = 5;
+    const expectedCount = parseInt(wordCount, 10);
+    const history: GenerationHistory[] = [];
+    let upperRetryCount = 0;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      this.throwIfAborted();
+      console.log(`\n--- 对联尝试 ${attempt}/${maxAttempts} ---`);
+
       try {
-        await historyDB.init();
-        await historyDB.createRecord(
-          this.recordId,
-          topic,
-          wordCount,
-          formData || {
-            coupletOrder: 'upper-lower',
-            horizontalDirection: 'left-right',
-            fuDirection: 'upright'
-          }
-        );
-        console.log(`✓ 已创建生成记录: ${this.recordId}`);
+        const result = await this.generateSingleCouplet(topic, wordCount, analysis, upperRetryCount, expectedCount);
+        
+        if (result.success) {
+          history.push({ attempt, upperCouplet: result.upperCouplet, lowerCouplet: result.lowerCouplet });
+          console.log(`\n✓ 对联生成成功`);
+          return { upperCouplet: result.upperCouplet, lowerCouplet: result.lowerCouplet, history };
+        }
+
+        upperRetryCount++;
       } catch (error) {
-        console.error('创建 IndexedDB 记录失败:', error);
+        console.error(`  ✗ 第${attempt}次对联尝试失败：`, error);
+        if (error instanceof Error && error.message === 'WORKFLOW_ABORTED') {
+          throw error;
+        }
       }
     }
 
+    // 尝试选举
+    if (history.length > 0) {
+      return await this.performElection(history, wordCount);
+    }
+
+    return this.buildFailedCoupletResult(topic, wordCount);
+  }
+
+  /**
+   * 生成单副对联
+   */
+  private async generateSingleCouplet(
+    topic: string,
+    wordCount: string,
+    analysis: TopicAnalysisResult,
+    retryCount: number,
+    expectedCount: number
+  ): Promise<{ success: boolean; upperCouplet: string; lowerCouplet: string }> {
+    const upperCouplet = await this.generateUpperCoupletWithRetry(topic, wordCount, analysis, retryCount, expectedCount);
+    if (!upperCouplet) {
+      return { success: false, upperCouplet: '', lowerCouplet: '' };
+    }
+
+    const lowerCouplet = await this.generateLowerCoupletWithRetry(topic, wordCount, upperCouplet, analysis, expectedCount);
+    if (!lowerCouplet) {
+      return { success: false, upperCouplet: '', lowerCouplet: '' };
+    }
+
+    return { success: true, upperCouplet, lowerCouplet };
+  }
+
+  /**
+   * 生成上联（带重试）
+   */
+  private async generateUpperCoupletWithRetry(
+    topic: string,
+    wordCount: string,
+    analysis: TopicAnalysisResult,
+    retryCount: number,
+    expectedCount: number
+  ): Promise<string> {
+    this.throwIfAborted();
+    console.log(`\n  [步骤1] 生成上联`);
+
+    this.emit({
+      type: 'upper_couplet_start',
+      timestamp: Date.now(),
+      stepName: retryCount > 0 ? `重试生成上联 (${retryCount + 1})` : '生成上联',
+      stepDescription: retryCount > 0 ? '重新创作上联' : '创作上联，奠定基调',
+      isRetry: retryCount > 0,
+      retryCount
+    });
+
+    const upperCouplet = await this.generateUpperCouplet(topic, wordCount, analysis);
+    console.log(`   上联生成：${upperCouplet}`);
+    console.log(`  上联字数：${upperCouplet.length}字`);
+
+    const error = validateWordCount(upperCouplet, expectedCount);
+    if (error) {
+      console.log(`  ✗ 上联验证失败：${error}`);
+      this.emit({
+        type: 'upper_couplet_failed',
+        timestamp: Date.now(),
+        stepName: retryCount > 0 ? `重试生成上联 (${retryCount + 1})` : '生成上联',
+        stepDescription: retryCount > 0 ? '重新创作上联' : '创作上联，奠定基调',
+        error,
+        isRetry: retryCount > 0,
+        retryCount
+      });
+      return '';
+    }
+
+    console.log(`  ✓ 上联字数验证通过`);
+    this.emit({
+      type: 'upper_couplet_complete',
+      timestamp: Date.now(),
+      stepName: retryCount > 0 ? `重试生成上联 (${retryCount + 1})` : '生成上联',
+      stepDescription: retryCount > 0 ? '重新创作上联' : '创作上联，奠定基调',
+      output: upperCouplet,
+      isRetry: retryCount > 0,
+      retryCount
+    });
+
+    return upperCouplet;
+  }
+
+  /**
+   * 生成下联（带重试）
+   */
+  private async generateLowerCoupletWithRetry(
+    topic: string,
+    wordCount: string,
+    upperCouplet: string,
+    analysis: TopicAnalysisResult,
+    expectedCount: number
+  ): Promise<string> {
+    this.throwIfAborted();
+    console.log(`\n  [步骤2] 生成下联`);
+
+    this.emit({
+      type: 'lower_couplet_start',
+      timestamp: Date.now(),
+      stepName: '生成下联',
+      stepDescription: '对仗下联，呼应上联'
+    });
+
+    const lowerCouplet = await this.generateLowerCouplet(topic, wordCount, upperCouplet, analysis);
+    console.log(`  下联生成：${lowerCouplet}`);
+    console.log(`  下联字数：${lowerCouplet.length}字`);
+
+    const error = validateWordCount(lowerCouplet, expectedCount);
+    if (error) {
+      console.log(`  ✗ 下联验证失败：${error}`);
+      this.emit({
+        type: 'lower_couplet_failed',
+        timestamp: Date.now(),
+        stepName: '生成下联',
+        stepDescription: '对仗下联，呼应上联',
+        error
+      });
+      return '';
+    }
+
+    console.log(`  ✓ 下联字数验证通过`);
+    this.emit({
+      type: 'lower_couplet_complete',
+      timestamp: Date.now(),
+      stepName: '生成下联',
+      stepDescription: '对仗下联，呼应上联',
+      output: lowerCouplet
+    });
+
+    return lowerCouplet;
+  }
+
+  /**
+   * 执行选举
+   */
+  private async performElection(
+    history: GenerationHistory[],
+    wordCount: string
+  ): Promise<{ upperCouplet: string; lowerCouplet: string; history: GenerationHistory[] }> {
+    this.throwIfAborted();
+    console.log(`\n=== 触发选举机制 ===`);
+    console.log(`候选数量：${history.length}个`);
+    console.log(`字数要求：${wordCount}字`);
+
+    const best = await this.selectBestCouplet(history, wordCount);
+    console.log(`✓ 选举完成，选中第${best.selectedIndex + 1}个候选`);
+    console.log(`  选择理由：${best.reason}`);
+
+    this.emit({
+      type: 'upper_couplet_complete',
+      timestamp: Date.now(),
+      stepName: '生成上联（选举）',
+      stepDescription: '从候选中选择最佳上联',
+      output: best.upperCouplet
+    });
+
+    this.emit({
+      type: 'lower_couplet_complete',
+      timestamp: Date.now(),
+      stepName: '生成下联（选举）',
+      stepDescription: '从候选中选择最佳下联',
+      output: best.lowerCouplet
+    });
+
+    return { upperCouplet: best.upperCouplet, lowerCouplet: best.lowerCouplet, history };
+  }
+
+  /**
+   * 构建失败的对联结果
+   */
+  private buildFailedCoupletResult(topic: string, wordCount: string): never {
+    console.log(`\n=== 春联生成失败 ===`);
+    console.log(`尝试次数：5次`);
+    console.log(`失败原因：所有尝试均未通过字数验证`);
+
+    this.emit({
+      type: 'workflow_failed',
+      timestamp: Date.now(),
+      stepName: '生成失败',
+      stepDescription: '未能生成符合要求的春联',
+      error: '所有尝试均未通过字数验证'
+    });
+
+    throw new Error('未能生成符合要求的春联，请调整主题后重试。');
+  }
+
+  /**
+   * 生成挥春
+   */
+  private async generateSpringScrolls(
+    topic: string,
+    upperCouplet: string,
+    lowerCouplet: string,
+    analysis: TopicAnalysisResult
+  ): Promise<string[]> {
+    const maxAttempts = 5;
+    let scrollsRetryCount = 0;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      this.throwIfAborted();
+      console.log(`\n--- 挥春尝试 ${attempt}/${maxAttempts} ---`);
+
+      try {
+        const result = await this.generateSpringScrollsWithRetry(topic, upperCouplet, lowerCouplet, analysis, scrollsRetryCount);
+        
+        if (result.success) {
+          return result.scrolls;
+        }
+
+        scrollsRetryCount++;
+      } catch (error) {
+        console.error(`  ✗ 第${attempt}次挥春尝试失败：`, error);
+        if (error instanceof Error && error.message === 'WORKFLOW_ABORTED') {
+          throw error;
+        }
+        scrollsRetryCount++;
+      }
+    }
+
+    // 使用默认挥春
+    return this.getDefaultSpringScrolls();
+  }
+
+  /**
+   * 生成挥春（带重试）
+   */
+  private async generateSpringScrollsWithRetry(
+    topic: string,
+    upperCouplet: string,
+    lowerCouplet: string,
+    analysis: TopicAnalysisResult,
+    retryCount: number
+  ): Promise<{ success: boolean; scrolls: string[] }> {
+    this.emit({
+      type: 'spring_scrolls_start',
+      timestamp: Date.now(),
+      stepName: retryCount > 0 ? `重试生成挥春 (${retryCount + 1})` : '生成挥春',
+      stepDescription: retryCount > 0 ? '重新创作挥春' : '创作四字挥春',
+      isRetry: retryCount > 0,
+      retryCount
+    });
+
+    const springScrolls = await this.generateSpringScrollsMethod(topic, upperCouplet, lowerCouplet, analysis);
+    console.log(`  挥春生成：${springScrolls.join('、')}`);
+
+    const errors = springScrolls.map(s => validateWordCount(s, 4)).filter(e => e);
+    if (errors.length > 0) {
+      console.log(`  ✗ 挥春验证失败：${errors.join('; ')}`);
+      this.emit({
+        type: 'spring_scrolls_failed',
+        timestamp: Date.now(),
+        stepName: retryCount > 0 ? `重试生成挥春 (${retryCount + 1})` : '生成挥春',
+        stepDescription: retryCount > 0 ? '重新创作挥春' : '创作四字挥春',
+        error: errors.join('; '),
+        isRetry: retryCount > 0,
+        retryCount
+      });
+      return { success: false, scrolls: [] };
+    }
+
+    console.log(`  ✓ 挥春字数验证通过`);
+    this.emit({
+      type: 'spring_scrolls_complete',
+      timestamp: Date.now(),
+      stepName: retryCount > 0 ? `重试生成挥春 (${retryCount + 1})` : '生成挥春',
+      stepDescription: retryCount > 0 ? '重新创作挥春' : '创作四字挥春',
+      output: springScrolls.join('、'),
+      isRetry: retryCount > 0,
+      retryCount
+    });
+
+    return { success: true, scrolls: springScrolls };
+  }
+
+  /**
+   * 获取默认挥春
+   */
+  private getDefaultSpringScrolls(): string[] {
+    const springScrolls = ['万事如意', '前程似锦', '阖家欢乐', '马到成功', '身体健康', '财源广进'];
+    console.log(`  使用默认挥春：${springScrolls.join('、')}`);
+
+    this.emit({
+      type: 'spring_scrolls_complete',
+      timestamp: Date.now(),
+      stepName: '生成挥春（默认）',
+      stepDescription: '使用默认挥春',
+      output: springScrolls.join('、')
+    });
+
+    return springScrolls;
+  }
+
+  /**
+   * 生成横批
+   */
+  private async generateHorizontalScroll(
+    topic: string,
+    upperCouplet: string,
+    lowerCouplet: string,
+    analysis: TopicAnalysisResult
+  ): Promise<string> {
+    this.throwIfAborted();
+    console.log(`\n  [步骤4] 生成横批`);
+
+    this.emit({
+      type: 'horizontal_scroll_start',
+      timestamp: Date.now(),
+      stepName: '生成横批',
+      stepDescription: '点睛横批，统揽全联'
+    });
+
+    const horizontalScroll = await this.generateHorizontalScrollMethod(topic, upperCouplet, lowerCouplet, analysis);
+    console.log(`  横批生成：${horizontalScroll}`);
+
+    this.emit({
+      type: 'horizontal_scroll_complete',
+      timestamp: Date.now(),
+      stepName: '生成横批',
+      stepDescription: '点睛横批，统揽全联',
+      output: horizontalScroll
+    });
+
+    return horizontalScroll;
+  }
+
+  /**
+   * 构建成功结果
+   */
+  private buildSuccessResult(
+    coupletResult: { upperCouplet: string; lowerCouplet: string },
+    horizontalScroll: string,
+    springScrolls: string[],
+    analysis?: TopicAnalysisResult
+  ): WorkflowResponse {
+    const result: WorkflowResponse = {
+      upperCouplet: coupletResult.upperCouplet,
+      lowerCouplet: coupletResult.lowerCouplet,
+      horizontalScroll,
+      springScrolls
+    };
+
+    if (analysis) {
+      result.analysis = analysis;
+    }
+
+    console.log(`\n✓ 春联生成成功`);
+    console.log(`  完整春联：`);
+    console.log(`    上联：${result.upperCouplet}`);
+    console.log(`    下联：${result.lowerCouplet}`);
+    console.log(`    横批：${result.horizontalScroll}`);
+    console.log(`    挥春：${result.springScrolls.join('、')}`);
+
+    return result;
+  }
+
+  /**
+   * 更新记录状态为已完成
+   */
+  private async updateRecordCompleted(result: WorkflowResponse): Promise<void> {
+    if (!this.recordId) return;
+
     try {
-      this.throwIfAborted();
-      console.log(`\n--- 阶段1：主题分析 ---`);
-
-      // 发送主题分析开始事件
-      this.emit({
-        type: 'analysis_start',
-        timestamp: Date.now(),
-        stepName: '主题分析',
-        stepDescription: '分析主题内涵，提取关键元素'
-      });
-
-      const analysis = await this.analyzeTopic(topic, wordCount);
-
-      // 发送主题分析完成事件
-      this.emit({
-        type: 'analysis_complete',
-        timestamp: Date.now(),
-        stepName: '主题分析',
-        stepDescription: '分析主题内涵，提取关键元素',
-        output: analysis.substring(0, 200)
-      });
-
-      console.log(`✓ 主题分析完成`);
-      console.log(`  分析结果：${analysis.substring(0, 100)}${analysis.length > 100 ? '...' : ''}`);
-
-      // 第一步：生成上联和下联
-      let upperCouplet = '';
-      let lowerCouplet = '';
-      let coupletSuccess = false;
-
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        this.throwIfAborted();
-        console.log(`\n--- 对联尝试 ${attempt}/${maxAttempts} ---`);
-
-        try {
-          this.throwIfAborted();
-          console.log(`\n  [步骤1] 生成上联`);
-
-          // 发送上联生成开始事件
-          this.emit({
-            type: 'upper_couplet_start',
-            timestamp: Date.now(),
-            stepName: upperRetryCount > 0 ? `重试生成上联 (${upperRetryCount + 1})` : '生成上联',
-            stepDescription: upperRetryCount > 0 ? '重新创作上联' : '创作上联，奠定基调',
-            isRetry: upperRetryCount > 0,
-            retryCount: upperRetryCount
-          });
-
-          upperCouplet = await this.generateUpperCouplet(topic, wordCount, analysis);
-          console.log(`   上联生成：${upperCouplet}`);
-          console.log(`  上联字数：${upperCouplet.length}字`);
-
-          const upperWordError = validateWordCount(upperCouplet, expectedCount);
-          if (upperWordError) {
-            console.log(`  ✗ 上联验证失败：${upperWordError}`);
-
-            // 发送上联生成失败事件
-            this.emit({
-              type: 'upper_couplet_failed',
-              timestamp: Date.now(),
-              stepName: upperRetryCount > 0 ? `重试生成上联 (${upperRetryCount + 1})` : '生成上联',
-              stepDescription: upperRetryCount > 0 ? '重新创作上联' : '创作上联，奠定基调',
-              error: upperWordError,
-              isRetry: upperRetryCount > 0,
-              retryCount: upperRetryCount
-            });
-
-            upperRetryCount++;
-            continue;
-          }
-
-          console.log(`  ✓ 上联字数验证通过`);
-
-          // 发送上联生成完成事件
-          this.emit({
-            type: 'upper_couplet_complete',
-            timestamp: Date.now(),
-            stepName: upperRetryCount > 0 ? `重试生成上联 (${upperRetryCount + 1})` : '生成上联',
-            stepDescription: upperRetryCount > 0 ? '重新创作上联' : '创作上联，奠定基调',
-            output: upperCouplet,
-            isRetry: upperRetryCount > 0,
-            retryCount: upperRetryCount
-          });
-
-          this.throwIfAborted();
-          console.log(`\n  [步骤2] 生成下联`);
-
-          // 发送下联生成开始事件
-          this.emit({
-            type: 'lower_couplet_start',
-            timestamp: Date.now(),
-            stepName: '生成下联',
-            stepDescription: '对仗下联，呼应上联'
-          });
-
-          lowerCouplet = await this.generateLowerCouplet(topic, wordCount, upperCouplet, analysis);
-          console.log(`  下联生成：${lowerCouplet}`);
-          console.log(`  下联字数：${lowerCouplet.length}字`);
-
-          const lowerWordError = validateWordCount(lowerCouplet, expectedCount);
-          if (lowerWordError) {
-            console.log(`  ✗ 下联验证失败：${lowerWordError}`);
-
-            // 发送下联生成失败事件
-            this.emit({
-              type: 'lower_couplet_failed',
-              timestamp: Date.now(),
-              stepName: '生成下联',
-              stepDescription: '对仗下联，呼应上联',
-              error: lowerWordError
-            });
-
-            // 下联失败需要重试上联
-            upperRetryCount++;
-            continue;
-          }
-
-          console.log(`  ✓ 下联字数验证通过`);
-
-          // 发送下联生成完成事件
-          this.emit({
-            type: 'lower_couplet_complete',
-            timestamp: Date.now(),
-            stepName: '生成下联',
-            stepDescription: '对仗下联，呼应上联',
-            output: lowerCouplet
-          });
-
-          history.push({
-            attempt,
-            upperCouplet,
-            lowerCouplet
-          });
-
-          coupletSuccess = true;
-          break;
-
-        } catch (error) {
-          console.error(`  ✗ 第${attempt}次对联尝试失败：`, error);
-          if (error instanceof Error && error.message === 'WORKFLOW_ABORTED') {
-            throw error;
-          }
-        }
-      }
-
-      // 如果对联生成失败，尝试选举
-      if (!coupletSuccess && history.length > 0) {
-        this.throwIfAborted();
-        console.log(`\n=== 触发选举机制 ===`);
-        console.log(`候选数量：${history.length}个`);
-        console.log(`字数要求：${wordCount}字`);
-
-        const best = await this.selectBestCouplet(history, wordCount);
-        console.log(`✓ 选举完成，选中第${best.selectedIndex + 1}个候选`);
-        console.log(`  选择理由：${best.reason}`);
-
-        upperCouplet = best.upperCouplet;
-        lowerCouplet = best.lowerCouplet;
-
-        // 发送上联最终完成事件（选举结果）
-        this.emit({
-          type: 'upper_couplet_complete',
-          timestamp: Date.now(),
-          stepName: '生成上联（选举）',
-          stepDescription: '从候选中选择最佳上联',
-          output: upperCouplet
-        });
-
-        // 发送下联最终完成事件（选举结果）
-        this.emit({
-          type: 'lower_couplet_complete',
-          timestamp: Date.now(),
-          stepName: '生成下联（选举）',
-          stepDescription: '从候选中选择最佳下联',
-          output: lowerCouplet
-        });
-
-        coupletSuccess = true;
-      }
-
-      // 对联生成完全失败
-      if (!coupletSuccess) {
-        console.log(`\n=== 春联生成失败 ===`);
-        console.log(`尝试次数：${maxAttempts}次`);
-        console.log(`失败原因：所有尝试均未通过字数验证`);
-
-        // 发送工作流失败事件
-        this.emit({
-          type: 'workflow_failed',
-          timestamp: Date.now(),
-          stepName: '生成失败',
-          stepDescription: '未能生成符合要求的春联',
-          error: '所有尝试均未通过字数验证'
-        });
-
-        const result: WorkflowResponse = {
-          upperCouplet: '',
-          lowerCouplet: '',
-          horizontalScroll: '',
-          springScrolls: [],
-          shouldReturnToHome: true,
-          formData: {
-            topic,
-            wordCount,
-            coupletOrder: formData?.coupletOrder || 'upper-lower',
-            horizontalDirection: formData?.horizontalDirection || 'left-right',
-            fuDirection: formData?.fuDirection || 'upright'
-          },
-          errorMessage: '未能生成符合要求的春联，请调整主题后重试。'
-        };
-
-        // 更新 IndexedDB 记录状态为失败
-        if (this.recordId) {
-          try {
-            await historyDB.updateRecordStatus(this.recordId, 'failed', undefined, result.errorMessage);
-            console.log(`✓ 已更新生成记录状态: failed`);
-          } catch (error) {
-            console.error('更新 IndexedDB 记录失败:', error);
-          }
-        }
-
-        return result;
-      }
-
-      // 第二步：生成挥春（独立重试循环）
-      let springScrolls: string[] = [];
-      let scrollsSuccess = false;
-
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        this.throwIfAborted();
-        console.log(`\n--- 挥春尝试 ${attempt}/${maxAttempts} ---`);
-
-        try {
-          // 发送挥春生成开始事件
-          this.emit({
-            type: 'spring_scrolls_start',
-            timestamp: Date.now(),
-            stepName: scrollsRetryCount > 0 ? `重试生成挥春 (${scrollsRetryCount + 1})` : '生成挥春',
-            stepDescription: scrollsRetryCount > 0 ? '重新创作挥春' : '创作四字挥春',
-            isRetry: scrollsRetryCount > 0,
-            retryCount: scrollsRetryCount
-          });
-
-          springScrolls = await this.generateSpringScrolls(topic, upperCouplet, lowerCouplet, analysis);
-          console.log(`  挥春生成：${springScrolls.join('、')}`);
-
-          const scrollErrors = springScrolls.map(s => validateWordCount(s, 4)).filter(e => e);
-          if (scrollErrors.length > 0) {
-            console.log(`  ✗ 挥春验证失败：${scrollErrors.join('; ')}`);
-
-            // 发送挥春生成失败事件
-            this.emit({
-              type: 'spring_scrolls_failed',
-              timestamp: Date.now(),
-              stepName: scrollsRetryCount > 0 ? `重试生成挥春 (${scrollsRetryCount + 1})` : '生成挥春',
-              stepDescription: scrollsRetryCount > 0 ? '重新创作挥春' : '创作四字挥春',
-              error: scrollErrors.join('; '),
-              isRetry: scrollsRetryCount > 0,
-              retryCount: scrollsRetryCount
-            });
-
-            scrollsRetryCount++;
-            continue;
-          }
-
-          console.log(`  ✓ 挥春字数验证通过`);
-
-          // 发送挥春生成完成事件
-          this.emit({
-            type: 'spring_scrolls_complete',
-            timestamp: Date.now(),
-            stepName: scrollsRetryCount > 0 ? `重试生成挥春 (${scrollsRetryCount + 1})` : '生成挥春',
-            stepDescription: scrollsRetryCount > 0 ? '重新创作挥春' : '创作四字挥春',
-            output: springScrolls.join('、'),
-            isRetry: scrollsRetryCount > 0,
-            retryCount: scrollsRetryCount
-          });
-
-          scrollsSuccess = true;
-          break;
-
-        } catch (error) {
-          console.error(`  ✗ 第${attempt}次挥春尝试失败：`, error);
-          if (error instanceof Error && error.message === 'WORKFLOW_ABORTED') {
-            throw error;
-          }
-          scrollsRetryCount++;
-        }
-      }
-
-      // 如果挥春生成失败，使用默认挥春
-      if (!scrollsSuccess) {
-        springScrolls = ['万事如意', '前程似锦', '阖家欢乐', '马到成功', '身体健康', '财源广进'];
-        console.log(`  使用默认挥春：${springScrolls.join('、')}`);
-
-        // 发送挥春生成完成事件（默认）
-        this.emit({
-          type: 'spring_scrolls_complete',
-          timestamp: Date.now(),
-          stepName: '生成挥春（默认）',
-          stepDescription: '使用默认挥春',
-          output: springScrolls.join('、')
-        });
-      }
-
-      // 第三步：生成横批
-      this.throwIfAborted();
-      console.log(`\n  [步骤4] 生成横批`);
-
-      // 发送横批生成开始事件
-      this.emit({
-        type: 'horizontal_scroll_start',
-        timestamp: Date.now(),
-        stepName: '生成横批',
-        stepDescription: '点睛横批，统揽全联'
-      });
-
-      const horizontalScroll = await this.generateHorizontalScroll(topic, upperCouplet, lowerCouplet, analysis);
-      console.log(`  横批生成：${horizontalScroll}`);
-
-      // 发送横批生成完成事件
-      this.emit({
-        type: 'horizontal_scroll_complete',
-        timestamp: Date.now(),
-        stepName: '生成横批',
-        stepDescription: '点睛横批，统揽全联',
-        output: horizontalScroll
-      });
-
-      // 发送工作流完成事件
-      this.emit({
-        type: 'workflow_complete',
-        timestamp: Date.now(),
-        stepName: '生成完成',
-        stepDescription: '春联生成成功'
-      });
-
-      console.log(`\n✓ 春联生成成功`);
-      console.log(`  完整春联：`);
-      console.log(`    上联：${upperCouplet}`);
-      console.log(`    下联：${lowerCouplet}`);
-      console.log(`    横批：${horizontalScroll}`);
-      console.log(`    挥春：${springScrolls.join('、')}`);
-
-      const result: WorkflowResponse = {
-        upperCouplet,
-        lowerCouplet,
-        horizontalScroll,
-        springScrolls
-      };
-
-      if (includeAnalysis) {
-        result.analysis = analysis;
-      }
-
-      // 更新 IndexedDB 记录状态为已完成
-      if (this.recordId) {
-        try {
-          await historyDB.updateRecordStatus(this.recordId, 'completed', result);
-          console.log(`✓ 已更新生成记录状态: completed`);
-        } catch (error) {
-          console.error('更新 IndexedDB 记录失败:', error);
-        }
-      }
-
-      return result;
-
+      await historyDB.updateRecordStatus(this.recordId, 'completed', result);
+      console.log(`✓ 已更新生成记录状态: completed`);
     } catch (error) {
-      if (error instanceof Error && error.message === 'WORKFLOW_ABORTED') {
-        // 发送工作中止事件
-        this.emit({
-          type: 'workflow_aborted',
-          timestamp: Date.now(),
-          stepName: '生成中止',
-          stepDescription: '用户手动中止生成'
-        });
+      console.error('更新 IndexedDB 记录失败:', error);
+    }
+  }
 
-        const abortedResult = {
-          upperCouplet: '',
-          lowerCouplet: '',
-          horizontalScroll: '',
-          springScrolls: [],
-          aborted: true,
-          shouldReturnToHome: true,
-          formData: {
-            topic,
-            wordCount,
-            coupletOrder: formData?.coupletOrder || 'upper-lower',
-            horizontalDirection: formData?.horizontalDirection || 'left-right',
-            fuDirection: formData?.fuDirection || 'upright'
-          },
-          errorMessage: '生成已中止'
-        };
+  /**
+   * 发送工作流完成事件
+   */
+  private emitWorkflowComplete(): void {
+    this.emit({
+      type: 'workflow_complete',
+      timestamp: Date.now(),
+      stepName: '生成完成',
+      stepDescription: '春联生成成功'
+    });
+  }
 
-        // 更新 IndexedDB 记录状态为中止
-        if (this.recordId) {
-          try {
-            await historyDB.updateRecordStatus(this.recordId, 'aborted', undefined, abortedResult.errorMessage);
-            console.log(`✓ 已更新生成记录状态: aborted`);
-          } catch (error) {
-            console.error('更新 IndexedDB 记录失败:', error);
-          }
-        }
+  /**
+   * 处理工作流错误
+   */
+  private handleWorkflowError(
+    error: unknown,
+    topic: string,
+    wordCount: string,
+    formData?: any
+  ): WorkflowResponse {
+    if (error instanceof Error && error.message === 'WORKFLOW_ABORTED') {
+      return this.buildAbortedResult(topic, wordCount, formData);
+    }
 
-        return abortedResult;
-      }
-      throw error;
+    throw error;
+  }
+
+  /**
+   * 构建中止结果
+   */
+  private buildAbortedResult(topic: string, wordCount: string, formData?: any): WorkflowResponse {
+    this.emit({
+      type: 'workflow_aborted',
+      timestamp: Date.now(),
+      stepName: '生成中止',
+      stepDescription: '用户手动中止生成'
+    });
+
+    const result: WorkflowResponse = {
+      upperCouplet: '',
+      lowerCouplet: '',
+      horizontalScroll: '',
+      springScrolls: [],
+      aborted: true,
+      shouldReturnToHome: true,
+      formData: {
+        topic,
+        wordCount,
+        coupletOrder: formData?.coupletOrder || 'upper-lower',
+        horizontalDirection: formData?.horizontalDirection || 'left-right',
+        fuDirection: formData?.fuDirection || 'upright'
+      },
+      errorMessage: '生成已中止'
+    };
+
+    if (this.recordId) {
+      this.updateRecordAborted(result.errorMessage);
+    }
+
+    return result;
+  }
+
+  /**
+   * 更新记录状态为中止
+   */
+  private async updateRecordAborted(errorMessage: string): Promise<void> {
+    if (!this.recordId) return;
+
+    try {
+      await historyDB.updateRecordStatus(this.recordId, 'aborted', undefined, errorMessage);
+      console.log(`✓ 已更新生成记录状态: aborted`);
+    } catch (error) {
+      console.error('更新 IndexedDB 记录失败:', error);
     }
   }
 
@@ -671,14 +789,14 @@ export class SpringWorkflowService {
   }
 
   /**
-   * 生成挥春
+   * 生成挥春（内部方法）
    * @param topic 主题
    * @param upperCouplet 上联
    * @param lowerCouplet 下联
    * @param analysis 主题分析结果
    * @returns 挥春列表
    */
-  private async generateSpringScrolls(
+  private async generateSpringScrollsMethod(
     topic: string,
     upperCouplet: string,
     lowerCouplet: string,
@@ -692,14 +810,14 @@ export class SpringWorkflowService {
   }
 
   /**
-   * 生成横批
+   * 生成横批（内部方法）
    * @param topic 主题
    * @param upperCouplet 上联
    * @param lowerCouplet 下联
    * @param analysis 主题分析结果
    * @returns 横批
    */
-  private async generateHorizontalScroll(
+  private async generateHorizontalScrollMethod(
     topic: string,
     upperCouplet: string,
     lowerCouplet: string,

@@ -138,75 +138,100 @@ export default function LoadingPage() {
     const status = getStatusFromEventType(event.type);
 
     setSteps(prevSteps => {
-      // 查找是否已存在相同名称的running步骤
       const existingRunningIndex = prevSteps.findIndex(
         s => s.name === event.stepName && s.status === 'running'
       );
 
       if (existingRunningIndex !== -1) {
-        // 更新现有步骤
-        const newSteps = [...prevSteps];
-        newSteps[existingRunningIndex] = {
-          ...newSteps[existingRunningIndex],
-          status,
-          output: event.output,
-          error: event.error
-        };
-        return newSteps;
+        return updateStep(prevSteps, existingRunningIndex, status, event);
       }
 
-      // 如果是开始事件，添加新步骤
-      if (event.type.includes('_start')) {
-        const newStep: UIStep = {
-          id: generateStepId(),
-          name: event.stepName,
-          description: event.stepDescription,
-          status: 'running',
-          isRetry: event.isRetry
-        };
-        return [...prevSteps, newStep];
-      }
-
-      // 如果是完成/失败事件但没有找到running步骤，添加新步骤
-      const newStep: UIStep = {
-        id: generateStepId(),
-        name: event.stepName,
-        description: event.stepDescription,
-        status,
-        output: event.output,
-        error: event.error,
-        isRetry: event.isRetry
-      };
-      return [...prevSteps, newStep];
+      return addNewStep(prevSteps, event, status);
     });
 
-    // 自动展开进行中的步骤
     if (status === 'running') {
-      setExpandedSteps(prev => {
-        const newSet = new Set(prev);
-        // 找到最新添加的步骤ID
-        setSteps(currentSteps => {
-          const lastStep = currentSteps[currentSteps.length - 1];
-          if (lastStep && lastStep.status === 'running') {
-            newSet.add(lastStep.id);
-          }
-          return currentSteps;
-        });
-        return newSet;
-      });
+      expandLatestRunningStep();
     }
 
-    // 处理工作流级别的事件
+    handleWorkflowEvents(event);
+  }, [generateStepId]);
+
+  /**
+   * 更新现有步骤
+   */
+  const updateStep = (
+    steps: UIStep[],
+    index: number,
+    status: UIStepStatus,
+    event: ProgressEvent
+  ): UIStep[] => {
+    const newSteps = [...steps];
+    newSteps[index] = {
+      ...newSteps[index],
+      status,
+      output: event.output,
+      error: event.error
+    };
+    return newSteps;
+  };
+
+  /**
+   * 添加新步骤
+   */
+  const addNewStep = (
+    steps: UIStep[],
+    event: ProgressEvent,
+    status: UIStepStatus
+  ): UIStep[] => {
+    const newStep: UIStep = {
+      id: generateStepId(),
+      name: event.stepName,
+      description: event.stepDescription,
+      status: event.type.includes('_start') ? 'running' : status,
+      output: event.output,
+      error: event.error,
+      isRetry: event.isRetry
+    };
+    return [...steps, newStep];
+  };
+
+  /**
+   * 展开最新的运行中步骤
+   */
+  const expandLatestRunningStep = (): void => {
+    setExpandedSteps(prev => {
+      const newSet = new Set(prev);
+      setSteps(currentSteps => {
+        const lastStep = currentSteps[currentSteps.length - 1];
+        if (lastStep && lastStep.status === 'running') {
+          newSet.add(lastStep.id);
+        }
+        return currentSteps;
+      });
+      return newSet;
+    });
+  };
+
+  /**
+   * 处理工作流级别的事件
+   */
+  const handleWorkflowEvents = (event: ProgressEvent): void => {
     if (event.type === 'workflow_complete') {
       setIsCompleted(true);
-    } else if (event.type === 'workflow_failed') {
+      return;
+    }
+
+    if (event.type === 'workflow_failed') {
       setIsFailed(true);
       setError(event.error || '生成失败');
-    } else if (event.type === 'workflow_aborted') {
+      return;
+    }
+
+    if (event.type === 'workflow_aborted') {
       setIsAborted(true);
       setError('生成已中止');
     }
-  }, [generateStepId]);
+  };
 
   useEffect(() => {
     const loadFromHistory = async (id: string): Promise<boolean> => {
@@ -215,162 +240,227 @@ export default function LoadingPage() {
         const record = await historyDB.getRecord(id);
 
         if (!record) {
-          // 找不到记录，返回 false 表示需要开始新生成
           return false;
         }
 
         setTopic(record.topic);
+        setSteps(deduplicateSteps(record.steps));
+        updatePageStateFromRecord(record);
 
-        // 对步骤进行去重：同一步骤名称只保留最新状态（completed > running > failed > pending）
-        const stepMap = new Map<string, WorkflowStep>();
-        const statusPriority = { completed: 3, running: 2, failed: 1, pending: 0 };
-
-        for (const step of record.steps) {
-          const existing = stepMap.get(step.name);
-          if (!existing || statusPriority[step.status] >= statusPriority[existing.status]) {
-            stepMap.set(step.name, step);
-          }
-        }
-
-        // 转换历史步骤为 UI 步骤，保持原始顺序
-        const uniqueSteps = record.steps
-          .filter((step, index, arr) => arr.findIndex(s => s.name === step.name) === index)
-          .map(step => stepMap.get(step.name)!);
-
-        const uiSteps = uniqueSteps.map((step: WorkflowStep) => ({
-          id: step.id,
-          name: step.name,
-          description: step.description,
-          status: step.status,
-          output: step.output,
-          error: step.error,
-          isRetry: false
-        }));
-
-        setSteps(uiSteps);
-
-        // 根据记录状态设置页面状态
-        if (record.status === 'completed') {
-          setIsCompleted(true);
-          if (record.result) {
-            sessionStorageService.setObject('generatedData', record.result);
-          }
-        } else if (record.status === 'failed') {
-          setIsFailed(true);
-          setError(record.error || '生成失败');
-        } else if (record.status === 'aborted') {
-          setIsAborted(true);
-          setError(record.error || '生成已中止');
-        }
-        // 'pending' 状态不处理，保持初始状态
-
-        return true; // 成功加载历史记录
+        return true;
       } catch (err) {
         console.error('加载历史记录失败:', err);
-        return false; // 出错，返回 false 表示需要开始新生成
+        return false;
       } finally {
         setIsLoadingHistory(false);
         historyLoadedRef.current = true;
       }
     };
 
-    const startNewGeneration = async () => {
-      const storedTopic = sessionStorageService.getString('topic');
-      const selectedModel = sessionStorageService.getString('selectedModel');
-      const storedRecordId = sessionStorageService.getString('recordId');
-      const wordCount = sessionStorageService.getString('wordCount') || '7';
-      const coupletOrder = sessionStorageService.getString('coupletOrder') || 'leftUpper';
-      const horizontalDirection = sessionStorageService.getString('horizontalDirection') || 'leftToRight';
-      const fuOrientation = sessionStorageService.getString('fuOrientation') || 'upright';
+    /**
+     * 对步骤进行去重，保留最新状态
+     */
+    const deduplicateSteps = (steps: WorkflowStep[]): UIStep[] => {
+      const stepMap = new Map<string, WorkflowStep>();
+      const statusPriority = { completed: 3, running: 2, failed: 1, pending: 0 };
 
-      if (!storedTopic || !selectedModel) {
+      for (const step of steps) {
+        const existing = stepMap.get(step.name);
+        if (!existing || statusPriority[step.status] >= statusPriority[existing.status]) {
+          stepMap.set(step.name, step);
+        }
+      }
+
+      const uniqueSteps = steps
+        .filter((step, index, arr) => arr.findIndex(s => s.name === step.name) === index)
+        .map(step => stepMap.get(step.name)!);
+
+      return uniqueSteps.map((step: WorkflowStep) => ({
+        id: step.id,
+        name: step.name,
+        description: step.description,
+        status: step.status,
+        output: step.output,
+        error: step.error,
+        isRetry: false
+      }));
+    };
+
+    /**
+     * 根据记录状态更新页面状态
+     */
+    const updatePageStateFromRecord = (record: GenerationRecord): void => {
+      if (record.status === 'completed') {
+        setIsCompleted(true);
+        if (record.result) {
+          sessionStorageService.setObject('generatedData', record.result);
+        }
+        return;
+      }
+
+      if (record.status === 'failed') {
+        setIsFailed(true);
+        setError(record.error || '生成失败');
+        return;
+      }
+
+      if (record.status === 'aborted') {
+        setIsAborted(true);
+        setError(record.error || '生成已中止');
+      }
+    };
+
+    const startNewGeneration = async () => {
+      const sessionData = loadSessionData();
+
+      if (!validateSessionData(sessionData)) {
         navigate('/');
         return;
       }
 
-      setTopic(storedTopic);
+      setTopic(sessionData.topic);
+      await generateSpringFestival(sessionData);
+    };
 
-      const generateSpringFestival = async () => {
-        const { apiUrl, apiKey } = getApiConfig();
+    /**
+     * 加载会话数据
+     */
+    const loadSessionData = () => ({
+      topic: sessionStorageService.getString('topic'),
+      selectedModel: sessionStorageService.getString('selectedModel'),
+      recordId: sessionStorageService.getString('recordId'),
+      wordCount: sessionStorageService.getString('wordCount') || '7',
+      coupletOrder: sessionStorageService.getString('coupletOrder') || 'leftUpper',
+      horizontalDirection: sessionStorageService.getString('horizontalDirection') || 'leftToRight',
+      fuOrientation: sessionStorageService.getString('fuOrientation') || 'upright'
+    });
 
-        if (!apiUrl || !apiKey) {
-          const message = '请先在设置中配置 API';
-          setError(message);
-          setIsFailed(true);
-          return;
+    /**
+     * 验证会话数据
+     */
+    const validateSessionData = (data: ReturnType<typeof loadSessionData>): boolean => {
+      return !!(data.topic && data.selectedModel);
+    };
+
+    /**
+     * 生成春联
+     */
+    const generateSpringFestival = async (sessionData: ReturnType<typeof loadSessionData>): Promise<void> => {
+      const { apiUrl, apiKey } = getApiConfig();
+
+      if (!validateApiConfig(apiUrl, apiKey)) {
+        return;
+      }
+
+      try {
+        const result = await executeWorkflow(sessionData, apiUrl, apiKey);
+        handleWorkflowResult(result);
+      } catch (err) {
+        handleWorkflowError(err);
+      }
+    };
+
+    /**
+     * 验证 API 配置
+     */
+    const validateApiConfig = (apiUrl: string, apiKey: string): boolean => {
+      if (!apiUrl || !apiKey) {
+        setError('请先在设置中配置 API');
+        setIsFailed(true);
+        return false;
+      }
+      return true;
+    };
+
+    /**
+     * 执行工作流
+     */
+    const executeWorkflow = async (
+      sessionData: ReturnType<typeof loadSessionData>,
+      apiUrl: string,
+      apiKey: string
+    ): Promise<any> => {
+      console.log('\n=== 开始春联生成工作流 ===');
+      console.log(`主题：${sessionData.topic}`);
+      console.log(`字数：${sessionData.wordCount}字`);
+
+      const workflowService = new SpringWorkflowService(
+        apiUrl,
+        apiKey,
+        sessionData.selectedModel,
+        sessionData.recordId || undefined
+      );
+      workflowServiceRef.current = workflowService;
+      workflowService.setProgressCallback(handleProgressEvent);
+
+      const formData = layoutConfigToFormData(
+        sessionData.topic,
+        sessionData.wordCount,
+        {
+          wordCount: sessionData.wordCount,
+          coupletOrder: sessionData.coupletOrder as any,
+          horizontalDirection: sessionData.horizontalDirection as any,
+          fuOrientation: sessionData.fuOrientation as any
         }
+      );
 
-        try {
-          console.log('\n=== 开始春联生成工作流 ===');
-          console.log(`主题：${storedTopic}`);
-          console.log(`字数：${wordCount}字`);
+      return await workflowService.executeWorkflow(
+        sessionData.topic,
+        sessionData.wordCount,
+        false,
+        formData
+      );
+    };
 
-          const workflowService = new SpringWorkflowService(apiUrl, apiKey, selectedModel, storedRecordId || undefined);
-          workflowServiceRef.current = workflowService;
+    /**
+     * 处理工作流结果
+     */
+    const handleWorkflowResult = (result: any): void => {
+      if (result.aborted) {
+        setIsAborted(true);
+        setError('生成已中止');
+        return;
+      }
 
-          // 设置进度回调
-          workflowService.setProgressCallback(handleProgressEvent);
+      if (result.shouldReturnToHome && !result.upperCouplet) {
+        console.log('\n=== 回退到首页 ===');
+        console.log('原因：', result.errorMessage);
+        setError(result.errorMessage || '生成失败');
+        setIsFailed(true);
+        return;
+      }
 
-          const formData = layoutConfigToFormData(
-            storedTopic,
-            wordCount,
-            {
-              wordCount,
-              coupletOrder: coupletOrder as any,
-              horizontalDirection: horizontalDirection as any,
-              fuOrientation: fuOrientation as any
-            }
-          );
+      sessionStorageService.setObject('generatedData', result);
+      console.log('\n=== 春联生成成功 ===');
+      setIsCompleted(true);
+    };
 
-          const result = await workflowService.executeWorkflow(storedTopic, wordCount, false, formData);
+    /**
+     * 处理工作流错误
+     */
+    const handleWorkflowError = (err: unknown): void => {
+      const message = err instanceof Error ? err.message : '生成失败，请重试';
 
-          // 检查是否被中止
-          if (result.aborted) {
-            setIsAborted(true);
-            setError('生成已中止');
-            return;
-          }
-
-          // 检查是否需要回退到首页
-          if (result.shouldReturnToHome && !result.upperCouplet) {
-            console.log('\n=== 回退到首页 ===');
-            console.log('原因：', result.errorMessage);
-            setError(result.errorMessage || '生成失败');
-            setIsFailed(true);
-            return;
-          }
-
-          sessionStorageService.setObject('generatedData', result);
-
-          console.log('\n=== 春联生成成功 ===');
-          setIsCompleted(true);
-
-        } catch (err) {
-          const message = err instanceof Error ? err.message : '生成失败，请重试';
-          if (message === 'WORKFLOW_ABORTED') {
-            setIsAborted(true);
-            setError('生成已中止');
-          } else {
-            setError(message);
-            setIsFailed(true);
-            console.error('春联生成失败：', message);
-          }
-        }
-      };
-
-      generateSpringFestival();
+      if (message === 'WORKFLOW_ABORTED') {
+        setIsAborted(true);
+        setError('生成已中止');
+      } else {
+        setError(message);
+        setIsFailed(true);
+        console.error('春联生成失败：', message);
+      }
     };
 
     const initPage = async () => {
-      // 如果有 recordId，尝试从历史记录加载
       if (recordId && !historyLoadedRef.current) {
         const loaded = await loadFromHistory(recordId);
-        // 如果找不到历史记录（新生成），则开始生成
         if (!loaded) {
           startNewGeneration();
         }
-      } else if (!recordId) {
-        // 没有 recordId，开始新生成
+        return;
+      }
+
+      if (!recordId) {
         startNewGeneration();
       }
     };
