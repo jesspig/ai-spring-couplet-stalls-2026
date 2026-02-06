@@ -2,6 +2,9 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { SpringWorkflowService } from '../services/spring-workflow.service';
 import { historyDB } from '../services/history-db.service';
+import StepList from '../components/StepList';
+import ProgressBar from '../components/ProgressBar';
+import ActionButtons from '../components/ActionButtons';
 import type { ProgressEvent, ProgressEventType, GenerationRecord, WorkflowStep } from '../types/spring.types';
 import { sessionStorageService, getApiConfig } from '../utils/storage.util';
 import { layoutConfigToFormData } from '../utils/layout-config.util';
@@ -46,38 +49,6 @@ function getStatusFromEventType(eventType: ProgressEventType): UIStepStatus {
     return 'failed';
   }
   return 'pending';
-}
-
-/**
- * 获取步骤状态图标
- */
-function getStepStatusIcon(status: UIStepStatus): string {
-  switch (status) {
-    case 'completed':
-      return '✓';
-    case 'running':
-      return '◌';
-    case 'failed':
-      return '✗';
-    default:
-      return '○';
-  }
-}
-
-/**
- * 获取步骤状态样式类
- */
-function getStepStatusClass(status: UIStepStatus): string {
-  switch (status) {
-    case 'completed':
-      return 'step-status-completed';
-    case 'running':
-      return 'step-status-running';
-    case 'failed':
-      return 'step-status-failed';
-    default:
-      return 'step-status-pending';
-  }
 }
 
 export default function LoadingPage() {
@@ -493,89 +464,25 @@ export default function LoadingPage() {
 
         {/* 进度条 */}
         {!isFailed && !isAborted && (
-          <div className="progress-bar-container">
-            <div className="progress-bar" style={{ width: `${progressPercent}%` }} />
-            <span className="progress-text">{progressPercent}%</span>
-          </div>
+          <ProgressBar progress={progressPercent} />
         )}
 
-        {/* 步骤列表 - 直接展示所有步骤 */}
-        <div className="steps-container">
-          {steps.map((step, index) => (
-            <div
-              key={step.id}
-              className={`step-item ${getStepStatusClass(step.status)} ${expandedSteps.has(step.id) ? 'expanded' : 'compact'}`}
-            >
-              <div className="step-header">
-                <div className="step-number">{index + 1}</div>
-                <div className="step-status-icon">
-                  {step.status === 'running' ? (
-                    <span className="spinner-small" />
-                  ) : (
-                    getStepStatusIcon(step.status)
-                  )}
-                </div>
-                <div className="step-info">
-                  <div className="step-name">{step.name}</div>
-                  {expandedSteps.has(step.id) && (
-                    <div className="step-description">{step.description}</div>
-                  )}
-                </div>
-                {step.output && (
-                  <button
-                    className="step-expand-btn"
-                    onClick={() => toggleStepExpand(step.id)}
-                    aria-label={expandedSteps.has(step.id) ? '折叠' : '展开'}
-                  >
-                    {expandedSteps.has(step.id) ? '收起' : '查看'}
-                  </button>
-                )}
-              </div>
-
-              {/* 展开的内容区域 */}
-              {expandedSteps.has(step.id) && step.output && (
-                <div className="step-output">
-                  <div className="step-output-content">{step.output}</div>
-                </div>
-              )}
-
-              {step.error && (
-                <div className="step-error">
-                  <div className="step-error-content">{step.error}</div>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+        {/* 步骤列表 */}
+        <StepList
+          steps={steps}
+          expandedSteps={expandedSteps}
+          onToggleExpand={toggleStepExpand}
+        />
 
         {/* 操作按钮区域 */}
-        <div className="action-buttons">
-          {/* 中止按钮 - 仅在生成中显示 */}
-          {!isCompleted && !isFailed && !isAborted && (
-            <button className="abort-button" onClick={handleAbort}>
-              终止生成
-            </button>
-          )}
-
-          {/* 立即查看按钮 - 仅在完成时显示 */}
-          {isCompleted && (
-            <>
-              <button className="view-result-button" onClick={handleViewResult}>
-                立即查看
-              </button>
-              <button className="back-home-button" onClick={handleBackToHome}>
-                返回首页
-              </button>
-            </>
-          )}
-
-          {/* 返回首页按钮 - 在中止或失败时显示 */}
-          {(isAborted || isFailed) && (
-            <button className="back-home-button" onClick={handleBackToHome}>
-              返回首页
-            </button>
-          )}
-        </div>
+        <ActionButtons
+          isCompleted={isCompleted}
+          isFailed={isFailed}
+          isAborted={isAborted}
+          onAbort={handleAbort}
+          onViewResult={handleViewResult}
+          onBackToHome={handleBackToHome}
+        />
 
         {/* 装饰元素 */}
         <div className="loading-decorations">
