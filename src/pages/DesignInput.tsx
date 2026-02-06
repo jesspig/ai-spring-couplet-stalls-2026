@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import ApiConfigButton from './components/ApiConfigButton';
-import HistoryModal from './components/HistoryModal';
-import type { Model } from './types/model.types';
-import type { FormData } from './types/spring.types';
-import { generateUUID } from './utils/uuid.util';
-import { getLayoutConfig, saveLayoutConfig, getApiConfig, getCachedModels, saveCachedModels, getCachedSelectedModel, saveCachedSelectedModel } from './utils/storage.util';
-import { fetchModels } from './services/llm/api.service';
+import ApiConfigButton from '../components/ApiConfigButton';
+import HistoryModal from '../components/HistoryModal';
+import type { Model } from '../types/model.types';
+import type { FormData } from '../types/spring.types';
+import { generateUUID } from '../utils/uuid.util';
+import { getLayoutConfig, saveLayoutConfig, getApiConfig, getCachedModels, saveCachedModels, getCachedSelectedModel, saveCachedSelectedModel } from '../utils/storage.util';
+import { fetchModels } from '../services/llm/api.service';
 
 
 export default function DesignInput() {

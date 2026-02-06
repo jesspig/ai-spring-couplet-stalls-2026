@@ -5,6 +5,7 @@ import { historyDB } from '../services/history-db.service';
 import type { SpringFestivalData, GenerationRecord } from '../types/spring.types';
 import { sessionStorageService } from '../utils/storage.util';
 import { coupletOrderFormToDisplay, horizontalDirectionFormToDisplay, fuOrientationFormToDisplay, layoutConfigToFormData } from '../utils/layout-config.util';
+import type { CoupletOrderDisplay, HorizontalDirectionDisplay, FuOrientationDisplay } from '../utils/layout-config.util';
 
 
 export default function DisplayPage() {
@@ -22,9 +23,15 @@ export default function DisplayPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // 使用状态管理控制面板选项，初始值从 sessionStorage 读取
-  const [coupletOrder, setCoupletOrder] = useState(sessionStorageService.getString('coupletOrder') || 'leftUpper');
-  const [horizontalDirection, setHorizontalDirection] = useState(sessionStorageService.getString('horizontalDirection') || 'leftToRight');
-  const [fuOrientation, setFuOrientation] = useState(sessionStorageService.getString('fuOrientation') || 'upright');
+  const [coupletOrder, setCoupletOrder] = useState<CoupletOrderDisplay>(
+    (sessionStorageService.getString('coupletOrder') || 'leftUpper') as CoupletOrderDisplay
+  );
+  const [horizontalDirection, setHorizontalDirection] = useState<HorizontalDirectionDisplay>(
+    (sessionStorageService.getString('horizontalDirection') || 'leftToRight') as HorizontalDirectionDisplay
+  );
+  const [fuOrientation, setFuOrientation] = useState<FuOrientationDisplay>(
+    (sessionStorageService.getString('fuOrientation') || 'upright') as FuOrientationDisplay
+  );
 
   useEffect(() => {
     const loadFromHistory = async (id: string) => {
@@ -85,19 +92,19 @@ export default function DisplayPage() {
   }, [navigate, recordId]);
 
   // 更新对联顺序
-  const handleCoupletOrderChange = (order: string) => {
+  const handleCoupletOrderChange = (order: CoupletOrderDisplay) => {
     setCoupletOrder(order);
     sessionStorageService.setString('coupletOrder', order);
   };
 
   // 更新横批方向
-  const handleHorizontalDirectionChange = (direction: string) => {
+  const handleHorizontalDirectionChange = (direction: HorizontalDirectionDisplay) => {
     setHorizontalDirection(direction);
     sessionStorageService.setString('horizontalDirection', direction);
   };
 
   // 更新福字方向
-  const handleFuOrientationChange = (orientation: string) => {
+  const handleFuOrientationChange = (orientation: FuOrientationDisplay) => {
     setFuOrientation(orientation);
     sessionStorageService.setString('fuOrientation', orientation);
   };
@@ -112,9 +119,9 @@ export default function DisplayPage() {
       sessionStorageService.getString('wordCount') || '7',
       {
         wordCount: sessionStorageService.getString('wordCount') || '7',
-        coupletOrder: coupletOrder as any,
-        horizontalDirection: horizontalDirection as any,
-        fuOrientation: fuOrientation as any
+        coupletOrder,
+        horizontalDirection,
+        fuOrientation
       }
     );
 

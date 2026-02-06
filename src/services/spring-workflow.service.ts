@@ -13,7 +13,8 @@ import type {
   WorkflowResponse,
   ProgressCallback,
   ProgressEvent,
-  WorkflowStep
+  WorkflowStep,
+  FormData
 } from "../types/spring.types";
 
 interface LLMConfig {
@@ -204,7 +205,7 @@ export class SpringWorkflowService {
   /**
    * 初始化记录
    */
-  private async initializeRecord(topic: string, wordCount: string, formData?: any): Promise<void> {
+  private async initializeRecord(topic: string, wordCount: string, formData?: FormData): Promise<void> {
     if (!this.recordId) return;
 
     try {
@@ -681,7 +682,7 @@ export class SpringWorkflowService {
     error: unknown,
     topic: string,
     wordCount: string,
-    formData?: any
+    formData?: FormData
   ): WorkflowResponse {
     if (error instanceof Error && error.message === 'WORKFLOW_ABORTED') {
       return this.buildAbortedResult(topic, wordCount, formData);
@@ -693,7 +694,7 @@ export class SpringWorkflowService {
   /**
    * 构建中止结果
    */
-  private buildAbortedResult(topic: string, wordCount: string, formData?: any): WorkflowResponse {
+  private buildAbortedResult(topic: string, wordCount: string, formData?: FormData): WorkflowResponse {
     this.emit({
       type: 'workflow_aborted',
       timestamp: Date.now(),

@@ -1,3 +1,5 @@
+import type { Model } from '../types/model.types';
+
 /**
  * 布局配置接口
  */
@@ -163,14 +165,14 @@ export function saveApiConfig(apiUrl: string, apiKey: string): void {
 /**
  * 获取缓存的模型列表
  */
-export function getCachedModels(): any[] | null {
-  return localStorageService.getObject(API_CONFIG_KEYS.CACHED_MODELS);
+export function getCachedModels(): Model[] | null {
+  return localStorageService.getObject<Model[]>(API_CONFIG_KEYS.CACHED_MODELS);
 }
 
 /**
  * 保存缓存的模型列表
  */
-export function saveCachedModels(models: any[]): void {
+export function saveCachedModels(models: Model[]): void {
   localStorageService.setObject(API_CONFIG_KEYS.CACHED_MODELS, models);
 }
 

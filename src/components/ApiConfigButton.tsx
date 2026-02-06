@@ -1,16 +1,6 @@
 import { useState } from 'react';
 import ApiConfigModal from './ApiConfigModal';
-
-
-/**
- * 模型信息
- */
-interface Model {
-  id: string;
-  object: string;
-  created: number;
-  owned_by: string;
-}
+import type { Model } from '../types/model.types';
 
 /**
  * API配置按钮组件属性

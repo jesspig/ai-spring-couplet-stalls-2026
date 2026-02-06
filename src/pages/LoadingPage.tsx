@@ -5,7 +5,8 @@ import { historyDB } from '../services/history-db.service';
 import StepList from '../components/StepList';
 import ProgressBar from '../components/ProgressBar';
 import ActionButtons from '../components/ActionButtons';
-import type { ProgressEvent, ProgressEventType, GenerationRecord, WorkflowStep } from '../types/spring.types';
+import type { ProgressEvent, ProgressEventType, GenerationRecord, WorkflowStep, WorkflowResponse } from '../types/spring.types';
+import type { CoupletOrderDisplay, HorizontalDirectionDisplay, FuOrientationDisplay } from '../utils/layout-config.util';
 import { sessionStorageService, getApiConfig } from '../utils/storage.util';
 import { layoutConfigToFormData } from '../utils/layout-config.util';
 
@@ -296,14 +297,22 @@ export default function LoadingPage() {
     /**
      * 加载会话数据
      */
-    const loadSessionData = () => ({
+    const loadSessionData = (): {
+      topic: string | null;
+      selectedModel: string | null;
+      recordId: string | null;
+      wordCount: string;
+      coupletOrder: CoupletOrderDisplay;
+      horizontalDirection: HorizontalDirectionDisplay;
+      fuOrientation: FuOrientationDisplay;
+    } => ({
       topic: sessionStorageService.getString('topic'),
       selectedModel: sessionStorageService.getString('selectedModel'),
       recordId: sessionStorageService.getString('recordId'),
       wordCount: sessionStorageService.getString('wordCount') || '7',
-      coupletOrder: sessionStorageService.getString('coupletOrder') || 'leftUpper',
-      horizontalDirection: sessionStorageService.getString('horizontalDirection') || 'leftToRight',
-      fuOrientation: sessionStorageService.getString('fuOrientation') || 'upright'
+      coupletOrder: (sessionStorageService.getString('coupletOrder') || 'leftUpper') as CoupletOrderDisplay,
+      horizontalDirection: (sessionStorageService.getString('horizontalDirection') || 'leftToRight') as HorizontalDirectionDisplay,
+      fuOrientation: (sessionStorageService.getString('fuOrientation') || 'upright') as FuOrientationDisplay
     });
 
     /**
@@ -350,7 +359,7 @@ export default function LoadingPage() {
       sessionData: ReturnType<typeof loadSessionData>,
       apiUrl: string,
       apiKey: string
-    ): Promise<any> => {
+    ): Promise<WorkflowResponse> => {
       console.log('\n=== 开始春联生成工作流 ===');
       console.log(`主题：${sessionData.topic}`);
       console.log(`字数：${sessionData.wordCount}字`);
@@ -365,13 +374,13 @@ export default function LoadingPage() {
       workflowService.setProgressCallback(handleProgressEvent);
 
       const formData = layoutConfigToFormData(
-        sessionData.topic,
+        sessionData.topic || '',
         sessionData.wordCount,
         {
           wordCount: sessionData.wordCount,
-          coupletOrder: sessionData.coupletOrder as any,
-          horizontalDirection: sessionData.horizontalDirection as any,
-          fuOrientation: sessionData.fuOrientation as any
+          coupletOrder: sessionData.coupletOrder,
+          horizontalDirection: sessionData.horizontalDirection,
+          fuOrientation: sessionData.fuOrientation
         }
       );
 
@@ -386,7 +395,7 @@ export default function LoadingPage() {
     /**
      * 处理工作流结果
      */
-    const handleWorkflowResult = (result: any): void => {
+    const handleWorkflowResult = (result: WorkflowResponse): void => {
       if (result.aborted) {
         setIsAborted(true);
         setError('生成已中止');
