@@ -14,6 +14,7 @@ import {
 } from "../config/prompts";
 import { parseLLMJson } from "../utils/json-parser.util";
 import { historyDB } from "./history-db.service";
+import { ApiService } from "./llm/api.service";
 import type {
   TopicAnalysisResult,
   WorkflowResponse,
@@ -52,6 +53,7 @@ export class SpringWorkflowService {
   private progressCallback: ProgressCallback | null = null;
   private recordId: string | null = null;
   private syncPromise: Promise<void> = Promise.resolve();
+  private apiService: ApiService;
 
   constructor(baseUrl: string, apiKey: string, model: string, recordId?: string) {
     this.config = {
@@ -60,6 +62,7 @@ export class SpringWorkflowService {
       model
     };
     this.recordId = recordId || null;
+    this.apiService = new ApiService({ baseUrl: this.config.baseUrl, apiKey: this.config.apiKey });
   }
 
   /**
@@ -755,38 +758,14 @@ export class SpringWorkflowService {
     userPrompt: string,
     temperature: number
   ): Promise<string> {
-    const url = `${this.config.baseUrl}/chat/completions`;
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.config.apiKey}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: this.config.model,
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt }
-        ],
-        temperature,
-        max_tokens: 500
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`LLM请求失败: ${response.status}`);
-    }
-
-    const data = await response.json() as {
-      choices?: Array<{ message?: { content?: string } }>;
-    };
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content) {
-      throw new Error("LLM返回内容为空");
-    }
-
-    return content;
+    return this.apiService.chatCompletion(
+      this.config.model,
+      [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      temperature,
+      500
+    );
   }
 }

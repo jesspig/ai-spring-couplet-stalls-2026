@@ -2,9 +2,11 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import ApiConfigButton from './components/ApiConfigButton';
 import HistoryModal from './components/HistoryModal';
-import type { Model, ModelsResponse } from './types/model.types';
+import type { Model } from './types/model.types';
 import type { FormData } from './types/spring.types';
 import { generateUUID } from './utils/uuid.util';
+import { getLayoutConfig, saveLayoutConfig, getApiConfig, getCachedModels, saveCachedModels, getCachedSelectedModel, saveCachedSelectedModel } from './utils/storage.util';
+import { fetchModels } from './services/llm/api.service';
 
 
 export default function DesignInput() {
@@ -27,34 +29,30 @@ export default function DesignInput() {
   const [horizontalDirection, setHorizontalDirection] = useState('rightToLeft');
   const [fuOrientation, setFuOrientation] = useState('upright');
 
-  // 从localStorage加载保存的布局配置
+  // 从 localStorage 加载保存的布局配置
   useEffect(() => {
-    const savedWordCount = localStorage.getItem('wordCount');
-    const savedCoupletOrder = localStorage.getItem('coupletOrder');
-    const savedHorizontalDirection = localStorage.getItem('horizontalDirection');
-    const savedFuOrientation = localStorage.getItem('fuOrientation');
-
-    if (savedWordCount) setWordCount(savedWordCount);
-    if (savedCoupletOrder) setCoupletOrder(savedCoupletOrder);
-    if (savedHorizontalDirection) setHorizontalDirection(savedHorizontalDirection);
-    if (savedFuOrientation) setFuOrientation(savedFuOrientation);
+    const savedConfig = getLayoutConfig();
+    if (savedConfig.wordCount) setWordCount(savedConfig.wordCount);
+    if (savedConfig.coupletOrder) setCoupletOrder(savedConfig.coupletOrder);
+    if (savedConfig.horizontalDirection) setHorizontalDirection(savedConfig.horizontalDirection);
+    if (savedConfig.fuOrientation) setFuOrientation(savedConfig.fuOrientation);
   }, []);
 
-  // 保存布局配置到localStorage
+  // 保存布局配置到 localStorage
   useEffect(() => {
-    localStorage.setItem('wordCount', wordCount);
+    saveLayoutConfig({ wordCount });
   }, [wordCount]);
 
   useEffect(() => {
-    localStorage.setItem('coupletOrder', coupletOrder);
+    saveLayoutConfig({ coupletOrder });
   }, [coupletOrder]);
 
   useEffect(() => {
-    localStorage.setItem('horizontalDirection', horizontalDirection);
+    saveLayoutConfig({ horizontalDirection });
   }, [horizontalDirection]);
 
   useEffect(() => {
-    localStorage.setItem('fuOrientation', fuOrientation);
+    saveLayoutConfig({ fuOrientation });
   }, [fuOrientation]);
 
   // 点击外部关闭下拉菜单
@@ -110,23 +108,17 @@ export default function DesignInput() {
   }, [location.state]);
 
   useEffect(() => {
-    const apiUrl = localStorage.getItem('apiUrl') || '';
-    const apiKey = localStorage.getItem('apiKey') || '';
+    const { apiUrl, apiKey } = getApiConfig();
 
-    const cachedModels = localStorage.getItem('cachedModels');
-    const cachedSelectedModel = localStorage.getItem('cachedSelectedModel');
+    const cachedModels = getCachedModels();
+    const cachedSelectedModel = getCachedSelectedModel();
 
     if (cachedModels) {
-      try {
-        const parsedModels = JSON.parse(cachedModels);
-        setModels(parsedModels);
-        if (parsedModels.length > 0 && !selectedModel) {
-          setSelectedModel(cachedSelectedModel || parsedModels[0].id);
-        }
-        setIsLoadingModels(false);
-      } catch (e) {
-        console.error('解析缓存的模型列表失败', e);
+      setModels(cachedModels);
+      if (cachedModels.length > 0 && !selectedModel) {
+        setSelectedModel(cachedSelectedModel || cachedModels[0].id);
       }
+      setIsLoadingModels(false);
     }
 
     if (!apiUrl || !apiKey) {
@@ -136,23 +128,14 @@ export default function DesignInput() {
       return;
     }
 
-    const baseUrl = apiUrl.replace(/\/$/, '');
-    fetch(`${baseUrl}/models`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json'
-      }
-    })
-      .then(res => res.json())
-      .then((data: ModelsResponse) => {
-        const newModels = data.data || [];
+    fetchModels(apiUrl, apiKey)
+      .then((newModels) => {
         setModels(newModels);
-        localStorage.setItem('cachedModels', JSON.stringify(newModels));
+        saveCachedModels(newModels);
         if (newModels.length > 0) {
           const modelToSelect = selectedModel || cachedSelectedModel || newModels[0].id;
           setSelectedModel(modelToSelect);
-          localStorage.setItem('cachedSelectedModel', modelToSelect);
+          saveCachedSelectedModel(modelToSelect);
         }
         setIsLoadingModels(false);
       })
@@ -167,7 +150,7 @@ export default function DesignInput() {
 
   const handleModelsUpdate = (newModels: Model[]) => {
     setModels(newModels);
-    localStorage.setItem('cachedModels', JSON.stringify(newModels));
+    saveCachedModels(newModels);
     setHasError(false);
     setErrorType(null);
     if (newModels.length > 0) {
@@ -175,7 +158,7 @@ export default function DesignInput() {
       if (!currentExists) {
         const newSelectedModel = newModels[0].id;
         setSelectedModel(newSelectedModel);
-        localStorage.setItem('cachedSelectedModel', newSelectedModel);
+        saveCachedSelectedModel(newSelectedModel);
       }
     }
   };
@@ -371,7 +354,7 @@ export default function DesignInput() {
                         className={`model-dropdown-item ${selectedModel === model.id ? 'selected' : ''}`}
                         onClick={() => {
                           setSelectedModel(model.id);
-                          localStorage.setItem('cachedSelectedModel', model.id);
+                          saveCachedSelectedModel(model.id);
                           setIsModelDropdownOpen(false);
                         }}
                       >

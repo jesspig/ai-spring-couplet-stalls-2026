@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { SpringWorkflowService } from '../services/spring-workflow.service';
 import { historyDB } from '../services/history-db.service';
 import type { ProgressEvent, ProgressEventType, GenerationRecord, WorkflowStep } from '../types/spring.types';
+import { sessionStorageService, getApiConfig } from '../utils/storage.util';
+import { layoutConfigToFormData } from '../utils/layout-config.util';
 
 
 /**
@@ -251,7 +253,7 @@ export default function LoadingPage() {
         if (record.status === 'completed') {
           setIsCompleted(true);
           if (record.result) {
-            sessionStorage.setItem('generatedData', JSON.stringify(record.result));
+            sessionStorageService.setObject('generatedData', record.result);
           }
         } else if (record.status === 'failed') {
           setIsFailed(true);
@@ -273,13 +275,13 @@ export default function LoadingPage() {
     };
 
     const startNewGeneration = async () => {
-      const storedTopic = sessionStorage.getItem('topic');
-      const selectedModel = sessionStorage.getItem('selectedModel');
-      const storedRecordId = sessionStorage.getItem('recordId');
-      const wordCount = sessionStorage.getItem('wordCount') || '7';
-      const coupletOrder = sessionStorage.getItem('coupletOrder') || 'leftUpper';
-      const horizontalDirection = sessionStorage.getItem('horizontalDirection') || 'leftToRight';
-      const fuOrientation = sessionStorage.getItem('fuOrientation') || 'upright';
+      const storedTopic = sessionStorageService.getString('topic');
+      const selectedModel = sessionStorageService.getString('selectedModel');
+      const storedRecordId = sessionStorageService.getString('recordId');
+      const wordCount = sessionStorageService.getString('wordCount') || '7';
+      const coupletOrder = sessionStorageService.getString('coupletOrder') || 'leftUpper';
+      const horizontalDirection = sessionStorageService.getString('horizontalDirection') || 'leftToRight';
+      const fuOrientation = sessionStorageService.getString('fuOrientation') || 'upright';
 
       if (!storedTopic || !selectedModel) {
         navigate('/');
@@ -289,8 +291,7 @@ export default function LoadingPage() {
       setTopic(storedTopic);
 
       const generateSpringFestival = async () => {
-        const apiUrl = localStorage.getItem('apiUrl') || '';
-        const apiKey = localStorage.getItem('apiKey') || '';
+        const { apiUrl, apiKey } = getApiConfig();
 
         if (!apiUrl || !apiKey) {
           const message = '请先在设置中配置 API';
@@ -310,11 +311,16 @@ export default function LoadingPage() {
           // 设置进度回调
           workflowService.setProgressCallback(handleProgressEvent);
 
-          const formData = {
-            coupletOrder: (coupletOrder === 'leftUpper' ? 'upper-lower' : 'lower-upper') as 'upper-lower' | 'lower-upper',
-            horizontalDirection: (horizontalDirection === 'leftToRight' ? 'left-right' : 'right-left') as 'left-right' | 'right-left',
-            fuDirection: (fuOrientation === 'upright' ? 'upright' : 'rotated') as 'upright' | 'rotated'
-          };
+          const formData = layoutConfigToFormData(
+            storedTopic,
+            wordCount,
+            {
+              wordCount,
+              coupletOrder: coupletOrder as any,
+              horizontalDirection: horizontalDirection as any,
+              fuOrientation: fuOrientation as any
+            }
+          );
 
           const result = await workflowService.executeWorkflow(storedTopic, wordCount, false, formData);
 
@@ -334,7 +340,7 @@ export default function LoadingPage() {
             return;
           }
 
-          sessionStorage.setItem('generatedData', JSON.stringify(result));
+          sessionStorageService.setObject('generatedData', result);
 
           console.log('\n=== 春联生成成功 ===');
           setIsCompleted(true);

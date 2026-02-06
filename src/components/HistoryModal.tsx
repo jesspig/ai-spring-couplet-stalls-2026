@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { GenerationRecord } from '../types/spring.types';
 import { historyDB } from '../services/history-db.service';
+import { formatDateTime, getStatusBadgeInfo } from '../utils/formatter.util';
 
 
 interface HistoryModalProps {
@@ -62,28 +63,8 @@ export default function HistoryModal({ isOpen, onClose }: HistoryModalProps) {
     }
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return <span className="status-badge status-completed">成功</span>;
-      case 'failed':
-        return <span className="status-badge status-failed">失败</span>;
-      case 'aborted':
-        return <span className="status-badge status-aborted">中止</span>;
-      default:
-        return <span className="status-badge status-pending">进行中</span>;
-    }
-  };
-
   const formatDate = (timestamp: number) => {
-    const date = new Date(timestamp);
-    return date.toLocaleString('zh-CN', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return formatDateTime(timestamp);
   };
 
   if (!isOpen) return null;
@@ -113,7 +94,10 @@ export default function HistoryModal({ isOpen, onClose }: HistoryModalProps) {
                       </span>
                     </div>
                     <div className="history-item-status">
-                      {getStatusBadge(record.status)}
+                      {(() => {
+                        const badge = getStatusBadgeInfo(record.status);
+                        return <span className={badge.className}>{badge.text}</span>;
+                      })()}
                     </div>
                   </div>
                   <div className="history-item-actions">

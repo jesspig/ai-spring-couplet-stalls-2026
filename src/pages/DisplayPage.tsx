@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import SpringFestivalSVG from '../components/SpringFestivalSVG';
 import { historyDB } from '../services/history-db.service';
 import type { SpringFestivalData, GenerationRecord } from '../types/spring.types';
+import { sessionStorageService } from '../utils/storage.util';
+import { coupletOrderFormToDisplay, horizontalDirectionFormToDisplay, fuOrientationFormToDisplay, layoutConfigToFormData } from '../utils/layout-config.util';
 
 
 export default function DisplayPage() {
@@ -20,9 +22,9 @@ export default function DisplayPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   // 使用状态管理控制面板选项，初始值从 sessionStorage 读取
-  const [coupletOrder, setCoupletOrder] = useState(sessionStorage.getItem('coupletOrder') || 'leftUpper');
-  const [horizontalDirection, setHorizontalDirection] = useState(sessionStorage.getItem('horizontalDirection') || 'leftToRight');
-  const [fuOrientation, setFuOrientation] = useState(sessionStorage.getItem('fuOrientation') || 'upright');
+  const [coupletOrder, setCoupletOrder] = useState(sessionStorageService.getString('coupletOrder') || 'leftUpper');
+  const [horizontalDirection, setHorizontalDirection] = useState(sessionStorageService.getString('horizontalDirection') || 'leftToRight');
+  const [fuOrientation, setFuOrientation] = useState(sessionStorageService.getString('fuOrientation') || 'upright');
 
   useEffect(() => {
     const loadFromHistory = async (id: string) => {
@@ -56,15 +58,15 @@ export default function DisplayPage() {
     };
 
     const loadFromSession = () => {
-      const storedData = sessionStorage.getItem('generatedData');
-      const storedTopic = sessionStorage.getItem('topic');
+      const storedData = sessionStorageService.getObject<SpringFestivalData>('generatedData');
+      const storedTopic = sessionStorageService.getString('topic');
 
       if (!storedData || !storedTopic) {
         navigate('/');
         return;
       }
 
-      setFestivalData(JSON.parse(storedData));
+      setFestivalData(storedData);
       setTopic(storedTopic);
       setIsLoading(false);
     };
@@ -79,33 +81,36 @@ export default function DisplayPage() {
   // 更新对联顺序
   const handleCoupletOrderChange = (order: string) => {
     setCoupletOrder(order);
-    sessionStorage.setItem('coupletOrder', order);
+    sessionStorageService.setString('coupletOrder', order);
   };
 
   // 更新横批方向
   const handleHorizontalDirectionChange = (direction: string) => {
     setHorizontalDirection(direction);
-    sessionStorage.setItem('horizontalDirection', direction);
+    sessionStorageService.setString('horizontalDirection', direction);
   };
 
   // 更新福字方向
   const handleFuOrientationChange = (orientation: string) => {
     setFuOrientation(orientation);
-    sessionStorage.setItem('fuOrientation', orientation);
+    sessionStorageService.setString('fuOrientation', orientation);
   };
 
   const handleReset = () => {
     // 保留表单信息，只移除生成的数据
-    sessionStorage.removeItem('generatedData');
+    sessionStorageService.remove('generatedData');
 
     // 构建表单数据用于回退时恢复
-    const formData = {
-      topic: topic || sessionStorage.getItem('topic') || '',
-      wordCount: sessionStorage.getItem('wordCount') || '7',
-      coupletOrder: (coupletOrder === 'leftUpper' ? 'upper-lower' : 'lower-upper') as 'upper-lower' | 'lower-upper',
-      horizontalDirection: (horizontalDirection === 'leftToRight' ? 'left-right' : 'right-left') as 'left-right' | 'right-left',
-      fuDirection: (fuOrientation === 'upright' ? 'upright' : 'rotated') as 'upright' | 'rotated'
-    };
+    const formData = layoutConfigToFormData(
+      topic || sessionStorageService.getString('topic') || '',
+      sessionStorageService.getString('wordCount') || '7',
+      {
+        wordCount: sessionStorageService.getString('wordCount') || '7',
+        coupletOrder: coupletOrder as any,
+        horizontalDirection: horizontalDirection as any,
+        fuOrientation: fuOrientation as any
+      }
+    );
 
     navigate('/', { state: { formData } });
   };

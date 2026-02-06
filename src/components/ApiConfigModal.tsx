@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { Model } from '../types/model.types';
+import { localStorageService } from '../utils/storage.util';
+import { fetchModels } from '../services/llm/api.service';
 
 /**
  * API配置弹窗组件属性
@@ -26,8 +28,8 @@ export default function ApiConfigModal({ isOpen, onClose, onModelsUpdate }: ApiC
 
   // 从 localStorage 加载保存的API配置
   useEffect(() => {
-    const savedUrl = localStorage.getItem('apiUrl');
-    const savedKey = localStorage.getItem('apiKey');
+    const savedUrl = localStorageService.getString('apiUrl');
+    const savedKey = localStorageService.getString('apiKey');
     if (savedUrl) setApiUrl(savedUrl);
     if (savedKey) setApiKey(savedKey);
   }, []);
@@ -47,8 +49,8 @@ export default function ApiConfigModal({ isOpen, onClose, onModelsUpdate }: ApiC
       return;
     }
 
-    localStorage.setItem('apiUrl', apiUrl);
-    localStorage.setItem('apiKey', apiKey);
+    localStorageService.setString('apiUrl', apiUrl);
+    localStorageService.setString('apiKey', apiKey);
 
     // 将测试获取的模型列表传递到下拉菜单
     if (onModelsUpdate) {
@@ -75,25 +77,10 @@ export default function ApiConfigModal({ isOpen, onClose, onModelsUpdate }: ApiC
     setTestMessage('正在获取模型列表...');
 
     try {
-      const baseUrl = apiUrl.replace(/\/$/, '');
-      const response = await fetch(`${baseUrl}/models`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        }
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.data) {
-        setTestStatus('success');
-        setTestMessage(`连接成功！获取到 ${data.data.length} 个模型，点击"保存"按钮保存配置`);
-        setModels(data.data);
-      } else {
-        setTestStatus('error');
-        setTestMessage(data.error?.message || '获取模型列表失败');
-      }
+      const fetchedModels = await fetchModels(apiUrl, apiKey);
+      setTestStatus('success');
+      setTestMessage(`连接成功！获取到 ${fetchedModels.length} 个模型，点击"保存"按钮保存配置`);
+      setModels(fetchedModels);
     } catch (error) {
       setTestStatus('error');
       setTestMessage(error instanceof Error ? error.message : '请求失败');
