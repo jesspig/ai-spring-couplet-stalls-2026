@@ -9,6 +9,7 @@
 - **前端框架**: React 18.3.1 + TypeScript 5.9.3
 - **构建工具**: Vite 6.0.7
 - **路由**: React Router DOM 7.13.0
+- **样式**: SCSS (sass-embedded 1.97.3)
 - **包管理器**: Yarn (支持 PnP 模式)
 - **部署平台**: GitHub Pages
 
@@ -31,10 +32,19 @@
 ```plaintext
 src/
 ├── components/          # React 组件
+│   ├── ActionButtons.tsx      # 操作按钮组件（终止/查看/返回）
+│   ├── ApiConfigButton.tsx    # API 配置按钮
+│   ├── ApiConfigModal.tsx     # API 配置弹窗
+│   ├── Couplet.tsx            # 对联渲染组件
+│   ├── FuCharacter.tsx        # 福字渲染组件
 │   ├── HistoryModal.tsx       # 历史记录弹窗
-│   ├── SettingsButton.tsx     # 设置按钮
-│   ├── SettingsModal.tsx      # 设置弹窗
-│   └── SpringFestivalSVG.tsx  # 春联 SVG 渲染组件
+│   ├── HorizontalScroll.tsx   # 横批渲染组件
+│   ├── ProgressBar.tsx        # 进度条组件
+│   ├── SpringFestivalSVG.tsx  # 春联 SVG 主渲染组件
+│   ├── SpringScrolls.tsx      # 挥春渲染组件
+│   ├── StepList.tsx           # 生成步骤列表组件
+│   ├── common/                # 通用组件
+│   └── ui/                    # UI 组件
 ├── config/              # 配置文件
 │   └── prompts/              # LLM 提示词配置
 │       ├── analysis.prompt.ts      # 主题分析提示词
@@ -50,19 +60,38 @@ src/
 │   ├── LoadingPage.tsx         # 加载页面（生成进度）
 │   └── DisplayPage.tsx         # 展示页面（结果展示）
 ├── services/            # 服务层
-│   ├── spring-workflow.service.ts # 春联生成工作流服务
-│   └── history-db.service.ts      # 历史记录数据库服务
+│   ├── generation/           # 生成服务
+│   │   ├── couplet-generator.service.ts      # 对联生成服务
+│   │   ├── election.service.ts               # 候选选举服务
+│   │   ├── horizontal-scroll-generator.service.ts # 横批生成服务
+│   │   ├── index.ts                          # 统一导出
+│   │   ├── spring-scrolls-generator.service.ts    # 挥春生成服务
+│   │   └── topic-analyzer.service.ts         # 主题分析服务
+│   ├── llm/                  # LLM 相关服务
+│   │   └── api.service.ts    # LLM API 服务
+│   ├── history-db.service.ts # 历史记录数据库服务
+│   └── spring-workflow.service.ts # 春联生成工作流服务
+├── styles/              # SCSS 样式
+│   ├── main.scss             # 主入口
+│   ├── abstracts/            # 变量、混合宏
+│   ├── base/                 # 基础样式、重置
+│   ├── components/           # 组件样式
+│   ├── layout/               # 布局样式
+│   └── pages/                # 页面样式
 ├── types/               # 类型定义
 │   ├── model.types.ts         # 模型相关类型
 │   └── spring.types.ts        # 春联相关类型
 ├── utils/               # 工具函数
+│   ├── formatter.util.ts      # 格式化工具（日期、状态、文本）
+│   ├── index.ts               # 统一导出
 │   ├── json-parser.util.ts    # JSON 解析工具
+│   ├── layout-config.util.ts  # 布局配置转换工具
+│   ├── storage.util.ts        # 存储服务工具
+│   ├── svg.util.ts            # SVG 渲染工具
 │   └── uuid.util.ts           # UUID 生成工具
 ├── App.tsx              # 应用根组件
-├── DesignInput.tsx      # 设计输入页面（入口）
 ├── main.tsx             # 应用入口
-├── routes.tsx           # 路由配置
-└── style.css            # 全局样式
+└── routes.tsx           # 路由配置
 ```
 
 ## 构建和运行
@@ -118,10 +147,24 @@ yarn preview
 
 ### 文件组织
 
-- 每个组件配套一个 CSS 文件（如 `SpringFestivalSVG.tsx` + `SpringFestivalSVG.css`）
+- 样式采用 SCSS 架构，按功能分层存放
 - 类型定义集中放在 `types/` 目录
 - 提示词配置放在 `config/prompts/` 目录
 - 业务逻辑封装在 `services/` 的服务类中
+- 工具函数集中放在 `utils/` 目录
+
+### 样式系统
+
+项目采用 SCSS 分层架构：
+
+```plaintext
+styles/
+├── abstracts/          # Sass 变量、混合宏、函数
+├── base/               # CSS 重置、基础样式、动画
+├── components/         # 组件级样式
+├── layout/             # 布局相关样式
+└── pages/              # 页面级样式
+```
 
 ### 状态管理
 
@@ -131,7 +174,9 @@ yarn preview
 - 使用 IndexedDB 持久化存储生成历史记录
 - 使用 React Router 的 `location.state` 传递页面间数据
 
-### 工作流服务
+### 服务层架构
+
+#### 工作流服务
 
 `SpringWorkflowService` 类负责春联生成的核心工作流：
 
@@ -151,6 +196,24 @@ yarn preview
 - 进度事件系统
 - 自动同步到 IndexedDB
 
+#### 生成服务
+
+生成逻辑已拆分为独立服务，位于 `services/generation/`：
+
+- **TopicAnalyzerService**: 主题分析
+- **CoupletGeneratorService**: 对联生成（上联/下联）
+- **SpringScrollsGeneratorService**: 挥春生成
+- **HorizontalScrollGeneratorService**: 横批生成
+- **ElectionService**: 候选选举
+
+#### LLM 服务
+
+`ApiService` 封装 LLM API 请求：
+
+- 统一的请求/响应处理
+- 错误处理和重试逻辑
+- 模型列表获取
+
 ### 数据存储策略
 
 - **localStorage**:
@@ -165,6 +228,15 @@ yarn preview
 - **IndexedDB**:
   - 生成历史记录（通过 `history-db.service.ts` 管理）
   - 每条记录包含：UUID、创建时间、主题、字数、状态、步骤、结果等
+
+### 工具函数
+
+- **formatter.util.ts**: 日期格式化、状态文本转换、文本处理
+- **json-parser.util.ts**: 安全的 JSON 解析，支持 Markdown 代码块提取
+- **layout-config.util.ts**: 表单数据与显示数据之间的配置转换
+- **storage.util.ts**: localStorage/sessionStorage 的封装，支持对象存储
+- **svg.util.ts**: SVG 渲染参数计算（颜色、字体、间距等）
+- **uuid.util.ts**: UUID 生成
 
 ### 配置要求
 
@@ -214,7 +286,7 @@ yarn preview
 
 ### Git 提交规范
 
-项目使用 Conventional Commits 规范（虽然未强制执行）：
+项目使用 Conventional Commits 规范：
 
 - `feat:` 新功能
 - `fix:` 修复 bug
@@ -228,7 +300,7 @@ yarn preview
 
 在修改代码时，请确保：
 
-1. TypeScript 类型定义完整，无 `any` 类型
+1. TypeScript 类型定义完整，避免使用 `any` 类型
 2. 函数添加 JSDoc 注释说明参数和返回值
 3. 遵循现有代码风格和命名约定
 4. 测试关键路径（特别是 API 调用和状态管理）
@@ -256,11 +328,11 @@ A: 修改 `src/config/prompts/` 目录下的提示词文件，无需重新构建
 
 ### Q: SVG 图片如何自定义样式？
 
-A: 修改 `src/components/SpringFestivalSVG.tsx` 中的颜色配置和渲染逻辑。
+A: 修改 `src/utils/svg.util.ts` 中的颜色配置或各组件的渲染逻辑。
 
 ### Q: 如何添加新的字数选项？
 
-A: 修改 `src/pages/DesignInput.tsx` 的字数选项，并在 `SpringFestivalSVG.tsx` 中添加相应的自适应参数计算逻辑。
+A: 修改 `src/pages/DesignInput.tsx` 的字数选项，并在 `src/utils/svg.util.ts` 中的 `getCoupletParams` 函数添加相应的自适应参数计算逻辑。
 
 ### Q: 历史记录存储在哪里？
 
